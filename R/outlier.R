@@ -6,17 +6,17 @@
 #' @export
 #'
 #' @examples
-outlier_ui <- function(id) {
-  # Application title
+outlierUi <- function(id) {
+  
+  ns <- NS(id)
 
-  # Sidebar with a slider input for number of bins 
-  sidebarLayout(
-    sidebarPanel(
-      selectInput("outlier_method", "Outlier Reduction Method", 
+  shiny::sidebarLayout(
+    shiny::sidebarPanel(
+      shiny::selectInput(ns("outlier_method"), "Outlier Reduction Method", 
                   choices = c("c-tf-idf",
                               "embeddings",
                               "tokenset similarity")),
-      sliderInput("outlier_threshold",
+      shiny::sliderInput(ns("outlier_threshold"),
                   "Threshold:",
                   min = 0,
                   max = 1,
@@ -24,8 +24,8 @@ outlier_ui <- function(id) {
     ),
     
     # Show a plot of the generated distribution
-    mainPanel(
-      plotOutput("outlier_plot")
+    shiny::mainPanel(
+      shiny::plotOutput(ns("outlier_plot"))
     )
   )
 }
@@ -40,40 +40,50 @@ outlier_ui <- function(id) {
 #' #' @export
 #' #'
 #' #' @examples
-#' outlier_server <- function(input, output, session){
-#'   
-#'   method <- reactive(input$outlier_method)
-#'   threshold <- reactive(input$outlier_threshold)
-#'   
-#'   
-#'   output$outlier_plot <- renderPlot({
-#'     
-#'     if (method() == "c-tf-idf"){
-#'       outliers <- bt_outliers_ctfidf(fitted_model = model(),
-#'                                      documents = df$docs,
-#'                                      topics = hdbscan_clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-#'                                      threshold = threshold())
-#'     } else if (method() == "embeddings"){
-#'       outliers <- bt_outliers_embeddings(fitted_model = model(),
-#'                                          documents = df$docs,
-#'                                          topics = hdbscan_clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-#'                                          embeddings = embeddings,
-#'                                          embedding_model = embedder,
-#'                                          threshold = threshold())
-#'     } else if (method() == "tokenset similarity"){
-#'       outliers <- bt_outliers_tokenset_similarity(fitted_model = model(),
-#'                                                   documents = df$docs,
-#'                                                   topics = hdbscan_clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-#'                                                   threshold = threshold())
-#'     }
-#'     
-#'     colour_pal <- metafolio::gg_color_hue(length(unique(outliers$current_topics)))
-#'     
-#'     df %>%
-#'       mutate(new_topics = as.factor(outliers$new_topics)) %>%
-#'       ggplot(aes(x = v1, y = v2, colour = new_topics)) +
-#'       geom_point() +
-#'       scale_color_manual(values = colour_pal)
-#'   })
-#'   
-#' }
+outlierServer <- function(id, df, model, clusters, embedder){
+  
+  shiny::moduleServer(id, function(input, output, session){
+    method <- shiny::reactive(input$outlier_method)
+    threshold <- shiny::reactive(input$outlier_threshold)
+    
+    
+    output$outlier_plot <- shiny::renderPlot({
+
+      if (method() == "c-tf-idf"){
+        outliers <- BertopicR::bt_outliers_ctfidf(
+          # fitted_model = model,
+          fitted_model = model(),
+          documents = df$docs,
+          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
+          threshold = threshold())
+      } else if (method() == "embeddings"){
+        outliers <- BertopicR::bt_outliers_embeddings(
+          # fitted_model = model,
+          fitted_model = model(),
+          documents = df$docs,
+          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
+          embeddings = df$embeddings,
+          embedding_model = embedder,
+          threshold = threshold())
+      } else if (method() == "tokenset similarity"){
+        outliers <- BertopicR::bt_outliers_tokenset_similarity(
+          # fitted_model = model,
+          fitted_model = model(),
+          documents = df$docs,
+          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
+          threshold = threshold())
+      }
+
+colour_pal <- metafolio::gg_color_hue(length(unique(outliers$current_topics)))
+
+      df %>%
+        dplyr::mutate(new_topics = as.factor(outliers$new_topics)) %>%
+        ggplot2::ggplot(aes(x = v1, y = v2, colour = new_topics)) +
+        ggplot2::geom_point() 
+      # +
+      #   ggplot2::scale_color_manual(values = colour_pal)
+    })
+    
+  })
+ 
+}

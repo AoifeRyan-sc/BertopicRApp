@@ -1,161 +1,107 @@
-df <- data
-
-
-ui <- fluidPage(
+# Example 1 ----
+datasetInput <- function(id, filter = NULL) {
+  names <- ls("package:datasets")
+  if (!is.null(filter)) {
+    data <- lapply(names, get, "package:datasets")
+    names <- names[vapply(data, filter, logical(1))]
+  }
   
-  # theme = shinytheme("readable"),
-  # Navbar page
-  # shinyjs::useShinyjs(),
-  navbarPage(
-    "BertopicR",
-    # Tab panel for clustering ----
-    tabPanel("Clustering",
-             # clustering_ui("clustering_panel")
-
-             # Title panel
-             titlePanel("Clustering"),
-
-             # sidebarLayout(
-               # sidebarPanel(
-                 clustering_ui("clustering_panel")
-                 # ),
-               # mainPanel(
-               #   plotOutput("cluster_plot")
-               # )
-             # )
-             
-    ), # tabPanel
-    
-    # Tab panel for exploring the model ----
-    tabPanel("Explore the Model", 
-             # tableOutput("topic_overview")),
-             # verbatimTextOutput("test")),
-             tableOutput("test")),
-    
-    # Outlier manipulation ----
-    tabPanel("Outlier Manipulation", 
-             titlePanel("Outlier Manipulation"),
-             
-             outlier_ui("outlier_ui")
-    )
-  ) # navbarPage
-  
-  # end ----
-) # fluidPage
-
-# Define server logic required to draw a histogram
-server <- function(input, output) {
-  
-  # clustering ----
-
-  clustering_server("clustering_panel", df = df)
-  
-  
-  # modelling ----
-  model <- shiny::eventReactive(input$do_modelling, {
-    bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
-                     reduction_model = BertopicR::bt_empty_reducer(),
-                     clustering_model = clusterer())
-  })
-  
-  observeEvent(input$do_modelling, { #maybe this should just be observe?
-    bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
-  })
-  
-  
-  output$complete_message <- renderPrint({
-    if (input$do_modelling) { 
-      isolate("Model generated with paramters...")# NEED TO POPULATE THIS
-    } else {
-      return("No model generated.")
-    }
-  })
-  
-  # disable buttons on modelling -----
-  observeEvent(input$do_modelling, { 
-    shinyjs::disable("min_cluster_size")
-  })
-  
-  observeEvent(input$do_modelling, {
-    shinyjs::disable("min_sample_size")
-  })
-  
-  observeEvent(input$do_modelling, {
-    shinyjs::disable("n_clustsers")
-  })
-  
-  observeEvent(input$do_modelling, {
-    shinyjs::disable("hdbscan_metric")
-  })
-  
-  observeEvent(input$do_modelling, {
-    shinyjs::disable("hdbscan_cluster_selection")
-  })
-  
-  observeEvent(input$do_modelling, {
-    shinyjs::disable("cluster_method")
-  })
-  
-  # reset button ----
-  # model <- shiny::eventReactive(input$reset_model, {
-  #   rm(model)
-  # })
-  # 
-  # observeEvent(input$do_modelling, { #maybe this should just be observe?
-  #   bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
-  # })
-  
-  
-  output$complete_message <- renderPrint({
-    if (input$reset_model) {
-      isolate("model params")# NEED TO POPULATE THIS
-    }
-  })
-  
-  # model exploration ----
-  output$topic_overview <- renderTable(
-    model()$get_topic_info() %>% select(-Representative_Docs)
-  )
-  output$test <- renderTable(
-    model()$get_topic_info() %>% select(-Representative_Docs)
-  )
-  # Outlier ----
-  
-  method <- reactive(input$outlier_method)
-  threshold <- reactive(input$outlier_threshold)
-  
-  
-  output$outlier_plot <- renderPlot({
-    
-    if (method() == "c-tf-idf"){
-      outliers <- bt_outliers_ctfidf(fitted_model = model(),
-                                     documents = df$docs,
-                                     topics = hdbscan_clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-                                     threshold = threshold())
-    } else if (method() == "embeddings"){
-      outliers <- bt_outliers_embeddings(fitted_model = model(),
-                                         documents = df$docs,
-                                         topics = hdbscan_clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-                                         embeddings = embeddings,
-                                         embedding_model = embedder,
-                                         threshold = threshold())
-    } else if (method() == "tokenset similarity"){
-      outliers <- bt_outliers_tokenset_similarity(fitted_model = model(),
-                                                  documents = df$docs,
-                                                  topics = hdbscan_clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-                                                  threshold = threshold())
-    }
-    
-    colour_pal <- gg_color_hue(length(unique(outliers$current_topics)))
-    
-    df %>%
-      mutate(new_topics = as.factor(outliers$new_topics)) %>%
-      ggplot(aes(x = v1, y = v2, colour = new_topics)) +
-      geom_point() +
-      scale_color_manual(values = colour_pal)
-  })
-  
+  selectInput(NS(id, "dataset"), "Pick a dataset", choices = names)
 }
 
-# Run the application 
-shinyApp(ui = ui, server = server)
+datasetServer <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    reactive(get(input$dataset, "package:datasets"))
+  })
+}
+
+datasetApp <- function(filter = NULL) {
+  ui <- fluidPage(
+    datasetInput("dataset", filter = filter),
+    tableOutput("data")
+  )
+  server <- function(input, output, session) {
+    data <- datasetServer("dataset")
+    output$data <- renderTable(head(data()))
+  }
+  shinyApp(ui = ui, server = server)
+}
+
+# Example 2 -----
+
+selectVarInput <- function(id) {
+  selectInput(NS(id, "var"), "Variable", choices = NULL) 
+}
+
+find_vars <- function(data, filter) {
+  names(data)[vapply(data, filter, logical(1))]
+}
+
+selectVarServer <- function(id, data, filter = is.numeric) {
+  moduleServer(id, function(input, output, session) {
+    observeEvent(data(), {
+      updateSelectInput(session, "var", choices = find_vars(data(), filter))
+    })
+    
+    reactive(data()[[input$var]])
+  })
+}
+
+selectVarApp <- function(filter = is.numeric) {
+  ui <- fluidPage(
+    datasetInput("data", is.data.frame),
+    selectVarInput("var"),
+    verbatimTextOutput("out")
+  )
+  server <- function(input, output, session) {
+    data <- datasetServer("data")
+    var <- selectVarServer("var", data, filter = filter)
+    output$out <- renderPrint(var())
+  }
+  
+  shinyApp(ui, server)
+}
+
+# Example 3 ----
+histogramOutput <- function(id) {
+  tagList(
+    numericInput(NS(id, "bins"), "bins", 10, min = 1, step = 1),
+    plotOutput(NS(id, "hist"))
+  )
+}
+
+
+histogramServer <- function(id, x, title = reactive("Histogram")) {
+  stopifnot(is.reactive(x))
+  stopifnot(is.reactive(title))
+  
+  moduleServer(id, function(input, output, session) {
+    output$hist <- renderPlot({
+      req(is.numeric(x()))
+      main <- paste0(title(), " [", input$bins, "]")
+      hist(x(), breaks = input$bins, main = main)
+    }, res = 96)
+  })
+}
+
+histogramApp <- function() {
+  ui <- fluidPage(
+    sidebarLayout(
+      sidebarPanel(
+        datasetInput("data", is.data.frame),
+        selectVarInput("var"),
+      ),
+      mainPanel(
+        histogramOutput("hist")    
+      )
+    )
+  )
+  
+  server <- function(input, output, session) {
+    data <- datasetServer("data")
+    x <- selectVarServer("var", data)
+    histogramServer("hist", x)
+  }
+  shinyApp(ui, server)
+} 
+histogramApp()
