@@ -8,15 +8,19 @@ ui <- fluidPage(
   shinyjs::useShinyjs(),
   navbarPage(
     "BertopicR",
+    tabPanel("test",
+             shiny::fluidRow(
+               shiny::verbatimTextOutput("test123")
+             )
+    ),
     tabPanel("Clustering",
              titlePanel("Clustering"),
              clusteringUi("clustering_panel")
     ), # tabPanel
     
     tabPanel("Explore the Model", 
-             # tableOutput("topic_overview")),
-             # verbatimTextOutput("test")),
-             tableOutput("test")),
+             modelExploreUi("explore_model_panel")
+             ),
     
     tabPanel("Outlier Manipulation", 
              titlePanel("Outlier Manipulation"),
@@ -28,28 +32,13 @@ ui <- fluidPage(
 ) # fluidPage
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
-  
+server <- function(input, output, session) {
+
   clustering_output <- clusteringServer("clustering_panel", df = df)
   clusters <- clustering_output$clusters
   model <- clustering_output$model
   
-  
-  output$complete_message <- renderPrint({
-    if (input$reset_model) {
-      isolate("model params")# NEED TO POPULATE THIS
-    }
-  })
-  
-  # model exploration ----
-  output$topic_overview <- renderTable(
-    model()$get_topic_info() %>% select(-Representative_Docs)
-  )
-  output$test <- renderTable(
-    model()$get_topic_info() %>% select(-Representative_Docs)
-  )
-  # Outlier ----
-  
+  modelExploreServer("explore_model_panel", model = model, df= df)
   outlierServer("outlier_panel", df = df, model = model, clusters = clusters, embedder = embedder)
   
 }

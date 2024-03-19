@@ -79,15 +79,13 @@ clusteringUi_save <- function(id) {
 clusteringServer <- function(id, df = df){
   
   moduleServer(id, function(input, output, session){
-    # ns <- session$ns
+    ns <- session$ns
     
-    modelling_outputs <- modellingServer("modelling_selection", df = df)
+    modelling_outputs <- modellingServer_ReavtiveValues("modelling_selection", df = df)
     
     clusters <- modelling_outputs$clusters
     model <- modelling_outputs$model
     
-    output$testing <- renderPrint(clusters()[1:10])
-
     umapServer("umap_clustering", df = df, clusters = clusters)
     
     list(clusters = clusters,

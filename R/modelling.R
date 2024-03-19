@@ -1,3 +1,11 @@
+#' Title
+#'
+#' @param id 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 modellingUi <- function(id){
   ns <- NS(id)
   
@@ -22,12 +30,21 @@ modellingUi <- function(id){
     ),
     actionButton(ns("do_modelling"), "Model", class = "btn-succes"),
     actionButton(ns("reset_model"), "Reset", classs = "btn-danger"),
-    verbatimTextOutput(ns("complete_message")),
-    verbatimTextOutput(ns("selection_method")),
-    verbatimTextOutput(ns("testing"))
+    verbatimTextOutput(ns("complete_message"))
+    # verbatimTextOutput(ns("selection_method")),
+    # verbatimTextOutput(ns("testing"))
   )
 }
 
+#' Title
+#'
+#' @param id 
+#' @param df 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 modellingServer <- function(id, df){
   moduleServer(id, function(input, output, server){
     
@@ -50,34 +67,52 @@ modellingServer <- function(id, df){
     shiny::observeEvent(min_cluster(), {
       shiny::updateSliderInput(inputId = "min_sample_size", max = min_cluster(), value = min_cluster()*0.5)
     })
+    # 
+    # model <- shiny::eventReactive(input$do_modelling, {
+    #   compiled_model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+    #                    reduction_model = BertopicR::bt_empty_reducer(),
+    #                    clustering_model = clusterer())
+    # })
     
-    model <- shiny::eventReactive(input$do_modelling, {
-      compiled_model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
-                       reduction_model = BertopicR::bt_empty_reducer(),
-                       clustering_model = clusterer())
-    })
-    
-    observe({
+    shiny::observeEvent(input$do_modelling, {
+      model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+                                         reduction_model = BertopicR::bt_empty_reducer(),
+                                         clustering_model = clusterer())
       bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
     })
     
+    shiny::observeEvent(input$reset_model, {
+      model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+                                reduction_model = BertopicR::bt_empty_reducer(),
+                                clustering_model = clusterer())
+    })
+    
     # disable inputs
-    observeEvent(input$do_modelling, { 
-      elements_to_disable <- c("min_cluster_size", "min_sample_size", "n_clustsers", 
+    shiny::observeEvent(input$do_modelling, { 
+      elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers", 
                                "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
       
       purrr::map(elements_to_disable, ~ shinyjs::disable(.x))
     })
     
+    shiny::observeEvent(input$reset_model, { 
+      elements_to_enable <- c("min_cluster_size", "min_sample_size", "n_clustsers", 
+                               "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+      
+      purrr::map(elements_to_enable, ~ shinyjs::enable(.x))
+    })
+    
+    # model <- shiny::eventReactive(input$reset_model, {
+    #   BertopicR::bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+    #                                        reduction_model = BertopicR::bt_empty_reducer(),
+    #                                        clustering_model = BertopicR::bt_empty_clusterer())
+    # })
+    
     # reset button ----
     # model <- shiny::eventReactive(input$reset_model, {
     #   rm(model)
     # })
-    # 
-    # observeEvent(input$do_modelling, { #maybe this should just be observe?
-    #   bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
-    # })
-    
+
     # output message to show modelling complete
     output$complete_message <- renderPrint({
       if (input$do_modelling) { 
@@ -94,61 +129,86 @@ modellingServer <- function(id, df){
   })
 }
 
+#' Title
+#'
+#' @param id 
+#' @param df 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 modellingServer_ReavtiveValues <- function(id, df){
   moduleServer(id, function(input, output, server){
     
-    # min_cluster <- reactive(input$min_cluster_size)
-    # min_samples <- reactive(input$min_sample_size)
-    # num_clusters <- reactive(input$n_clusters)
-    # select_method <- reactive(input$hdbscan_cluster_selection)
-    # hdb_metric <- reactive(input$hdbscan_metric)
+    r <- shiny::reactiveValues(model = NULL)
     
-    r <- reactiveValues(
-      min_cluster = reactive(input$min_cluster_size),
-      min_samples = reactive(input$min_sample_size),
-      num_clusters = reactive(input$n_clusters),
-      select_method = reactive(input$hdbscan_cluster_selection),
-      hdb_metric = reactive(input$hdbscan_metric)
-    )
+    min_cluster <- shiny::reactive(input$min_cluster_size)
+    min_samples <- shiny::reactive(input$min_sample_size)
+    num_clusters <- shiny::reactive(input$n_clusters)
+    select_method <- shiny::reactive(input$hdbscan_cluster_selection)
+    hdb_metric <- shiny::reactive(input$hdbscan_metric)
     
-    clusterer <- reactive({
+    clusterer <- shiny::reactive({
       if (input$cluster_method == "HDBSCAN"){
-        # BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
-        BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = r$min_cluster(), min_samples = r$min_samples(), cluster_selection_method = r$select_method(), metric = r$hdb_metric())
+        BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
       } else if (input$cluster_method == "K-Means"){
-        # BertopicR::bt_make_clusterer_kmeans(n_clusters = num_clusters())
-        BertopicR::bt_make_clusterer_kmeans(n_clusters = r$num_clusters())
+        BertopicR::bt_make_clusterer_kmeans(n_clusters = num_clusters())
       }
     })
     
-    # clusters <- reactive(BertopicR::bt_do_clustering(clusterer(), df$reduced_embeddings))
-    clusters <- reactive(BertopicR::bt_do_clustering(r$clusterer(), df$reduced_embeddings))
-    
-    # shiny::observeEvent(min_cluster(), {
-    #   shiny::updateSliderInput(inputId = "min_sample_size", max = min_cluster(), value = min_cluster()*0.5)
-    # })
+    clusters <- shiny::reactive(BertopicR::bt_do_clustering(clusterer(), df$reduced_embeddings))
     
     shiny::observeEvent(min_cluster(), {
-      shiny::updateSliderInput(inputId = "min_sample_size", max = r$min_cluster(), value = r$min_cluster()*0.5)
+      shiny::updateSliderInput(inputId = "min_sample_size", max = min_cluster(), value = min_cluster()*0.5)
     })
-    
+    # 
     # model <- shiny::eventReactive(input$do_modelling, {
     #   compiled_model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
     #                    reduction_model = BertopicR::bt_empty_reducer(),
     #                    clustering_model = clusterer())
     # })
     
-    model <- shiny::eventReactive(input$do_modelling, {
-      compiled_model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
-                                         reduction_model = BertopicR::bt_empty_reducer(),
-                                         clustering_model = r$clusterer())
+    shiny::observeEvent(input$do_modelling, {
+      r$model <- BertopicR::bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+                                reduction_model = BertopicR::bt_empty_reducer(),
+                                clustering_model = clusterer())
+      BertopicR::bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
     })
     
-    observe({
-      # bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
-      bt_fit_model(model = r$model(), documents = df$docs, embeddings = df$reduced_embeddings)
+    shiny::observeEvent(input$reset_model, {
+      r$model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+                                reduction_model = BertopicR::bt_empty_reducer(),
+                                clustering_model = clusterer())
     })
     
+    # disable inputs
+    shiny::observeEvent(input$do_modelling, { 
+      elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers", 
+                               "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+      
+      purrr::map(elements_to_disable, ~ shinyjs::disable(.x))
+    })
+    
+    shiny::observeEvent(input$reset_model, { 
+      elements_to_enable <- c("min_cluster_size", "min_sample_size", "n_clustsers", 
+                              "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+      
+      purrr::map(elements_to_enable, ~ shinyjs::enable(.x))
+    })
+    
+    # model <- shiny::eventReactive(input$reset_model, {
+    #   BertopicR::bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+    #                                        reduction_model = BertopicR::bt_empty_reducer(),
+    #                                        clustering_model = BertopicR::bt_empty_clusterer())
+    # })
+    
+    # reset button ----
+    # model <- shiny::eventReactive(input$reset_model, {
+    #   rm(model)
+    # })
+    
+    # output message to show modelling complete
     output$complete_message <- renderPrint({
       if (input$do_modelling) { 
         isolate("Model generated with paramters...")# NEED TO POPULATE THIS
@@ -159,7 +219,9 @@ modellingServer_ReavtiveValues <- function(id, df){
     
     
     list(clusters = clusters, 
-         model = model)
+         model = r$model)
     
   })
 }
+
+

@@ -1,7 +1,7 @@
 umapUi <- function(id){
   ns <- NS(id)
   tagList(
-    plotOutput(ns("cluster_plot"))
+    shiny::plotOutput(ns("cluster_plot"))
     )
 }
 
@@ -14,7 +14,7 @@ umapServer <- function(id, df = df, clusters = clusters){
   #   stop("Input dataframe should not be reactive.")
   # }
   moduleServer(id, function(input, output, session){
-    ns <- session$ns
+    # ns <- session$ns
     output$cluster_plot <- shiny::renderPlot({
       
       # cluster_pal <- gg_color_hue(length(unique(clusters())))
