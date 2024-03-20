@@ -143,6 +143,10 @@ modellingServer_ReavtiveValues <- function(id, df){
     
     r <- shiny::reactiveValues(model = NULL)
     
+    # model <- reactive({
+    #   r$model
+    # })
+    
     min_cluster <- shiny::reactive(input$min_cluster_size)
     min_samples <- shiny::reactive(input$min_sample_size)
     num_clusters <- shiny::reactive(input$n_clusters)
@@ -173,13 +177,12 @@ modellingServer_ReavtiveValues <- function(id, df){
       r$model <- BertopicR::bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
                                 reduction_model = BertopicR::bt_empty_reducer(),
                                 clustering_model = clusterer())
-      BertopicR::bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
+      # BertopicR::bt_fit_model(model = model(), documents = df$docs, embeddings = df$reduced_embeddings)
+      BertopicR::bt_fit_model(model = r$model, documents = df$docs, embeddings = df$reduced_embeddings)
     })
     
     shiny::observeEvent(input$reset_model, {
-      r$model <- bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
-                                reduction_model = BertopicR::bt_empty_reducer(),
-                                clustering_model = clusterer())
+      r$model <- NULL
     })
     
     # disable inputs
@@ -191,7 +194,7 @@ modellingServer_ReavtiveValues <- function(id, df){
     })
     
     shiny::observeEvent(input$reset_model, { 
-      elements_to_enable <- c("min_cluster_size", "min_sample_size", "n_clustsers", 
+      elements_to_enable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers", 
                               "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
       
       purrr::map(elements_to_enable, ~ shinyjs::enable(.x))
@@ -217,10 +220,15 @@ modellingServer_ReavtiveValues <- function(id, df){
       }
     })
     
+  # 
+    model <- shiny::reactive({
+      r$model
+    })
     
-    list(clusters = clusters, 
-         model = r$model)
-    
+    list(clusters = clusters,
+         model = model)
+         # model = NULL)
+  #   
   })
 }
 
