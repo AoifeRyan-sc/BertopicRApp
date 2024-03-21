@@ -25,7 +25,8 @@ outlierUi <- function(id) {
     
     # Show a plot of the generated distribution
     shiny::mainPanel(
-      shiny::plotOutput(ns("outlier_plot"))
+      # shiny::plotOutput(ns("outlier_plot"))
+      plotly::plotlyOutput(ns("outlier_plot"))
     )
   )
 }
@@ -46,9 +47,53 @@ outlierServer <- function(id, df, model, clusters, embedder){
     method <- shiny::reactive(input$outlier_method)
     threshold <- shiny::reactive(input$outlier_threshold)
     
+    outliers <- shiny::reactive({
+      if (method() == "c-tf-idf"){
+        BertopicR::bt_outliers_ctfidf(
+          # fitted_model = model,
+          fitted_model = model(),
+          documents = df$docs,
+          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
+          threshold = threshold())
+      } else if (method() == "embeddings"){
+        BertopicR::bt_outliers_embeddings(
+          # fitted_model = model,
+          fitted_model = model(),
+          documents = df$docs,
+          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
+          embeddings = df$embeddings,
+          embedding_model = embedder,
+          threshold = threshold())
+      } else if (method() == "tokenset similarity"){
+        BertopicR::bt_outliers_tokenset_similarity(
+          # fitted_model = model,
+          fitted_model = model(),
+          documents = df$docs,
+          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
+          threshold = threshold())
+      }
+    })
+    
+    new_topics <- eventReactive(outliers(), {
+      outliers()$new_topics
+    })
+    
+    
+    output$outlier_plot <- umapServer("umap_outliers", df = df, colour_var = new_topics)
+    
+  })
+ 
+}
+
+outlierServer_save <- function(id, df, model, clusters, embedder){
+  
+  shiny::moduleServer(id, function(input, output, session){
+    method <- shiny::reactive(input$outlier_method)
+    threshold <- shiny::reactive(input$outlier_threshold)
+    
     
     output$outlier_plot <- shiny::renderPlot({
-
+      
       if (method() == "c-tf-idf"){
         outliers <- BertopicR::bt_outliers_ctfidf(
           # fitted_model = model,
@@ -73,9 +118,9 @@ outlierServer <- function(id, df, model, clusters, embedder){
           topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
           threshold = threshold())
       }
-
-colour_pal <- metafolio::gg_color_hue(length(unique(outliers$current_topics)))
-
+      
+      colour_pal <- metafolio::gg_color_hue(length(unique(outliers$current_topics)))
+      
       df %>%
         dplyr::mutate(new_topics = as.factor(outliers$new_topics)) %>%
         ggplot2::ggplot(aes(x = v1, y = v2, colour = new_topics)) +
@@ -85,5 +130,5 @@ colour_pal <- metafolio::gg_color_hue(length(unique(outliers$current_topics)))
     })
     
   })
- 
+  
 }

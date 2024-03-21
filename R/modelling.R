@@ -18,11 +18,9 @@ modellingUi <- function(id){
     conditionalPanel(
       condition = "input.cluster_method == 'HDBSCAN'", ns = ns,
       sliderInput(ns("min_cluster_size"), "Minimum cluster size:",
-                  # min = 2, max = nrow(df)/2, value = 20
                   min = 2, max = 20, value = 20), # arbitrarily setting the defaults
       sliderInput(ns("min_sample_size"), "Minimum number of samples:",
                   min = 1, max = 10, value = 1), # these values update as defined in the server
-      # radioButtons("hdbscan_metric", "Metric", choices = c("cosine", "euclidean")),
       selectInput(ns("hdbscan_metric"), "Metric", choices = c(
         # "cosine",
         "braycurtis", "canberra", "chebyshev", "cityblock", "correlation",  "dice", "euclidean", "hamming", "jaccard", "jensenshannon", "kulczynski1", "mahalanobis", "matching", "minkowski", "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener", "sokalsneath", "sqeuclidean", "yule")),

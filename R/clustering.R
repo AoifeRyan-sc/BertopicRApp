@@ -9,20 +9,16 @@
 clusteringUi <- function(id) {
   
   ns <- NS(id)
-  # Sidebar layout
-  # tagList(
-    sidebarLayout(
-    # Sidebar panel with inputs
+  sidebarLayout(
     sidebarPanel(
        modellingUi(ns("modelling_selection"))
-      ),
-
-  # Main panel with the plot
-  mainPanel(
-    umapUi(ns("umap_clustering"))
-  )
-  ) # sidebarLayout
-  # )
+       ),
+    mainPanel(
+      # umapUi(ns("umap_clustering"))
+      # shiny::plotOutput(ns("cluster_plot"))
+      plotly::plotlyOutput(ns("cluster_plot"))
+      )
+    ) 
   
 }
 
@@ -86,7 +82,7 @@ clusteringServer <- function(id, df = df){
     clusters <- modelling_outputs$clusters
     model <- modelling_outputs$model
     
-    umapServer("umap_clustering", df = df, clusters = clusters)
+    output$cluster_plot <- umapServer("umap_clustering", df = df, colour_var = clusters)
     
     list(clusters = clusters,
          model = model)
