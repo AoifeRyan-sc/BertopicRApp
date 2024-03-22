@@ -16,15 +16,21 @@ umapServer <- function(id, df = df, colour_var){
   moduleServer(id, function(input, output, session){
     
     plotly::renderPlotly({
-      color_pal <- pals::stepped2(length(unique(colour_var())) - 1)
       
-      df %>% dplyr::mutate(topics = as.factor(colour_var())) %>%
+      if (-1 %in% colour_var()){
+        colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var())) - 1))
+      } else{
+        colour_pal <- pals::stepped2(length(unique(colour_var())))
+      }
+      
+
+      df() %>% dplyr::mutate(topics = as.factor(colour_var())) %>%
       plotly::plot_ly(x = ~v1,
                       y = ~v2,
                       color = ~topics,
                       type = "scatter", mode = "markers",
                       text = ~docs, hoverinfo = "text",
-                      colors = c("grey80", color_pal) 
+                      colors = colour_pal
       ) %>%
         plotly::layout(dragmode = "lasso") %>%
         plotly::config(
@@ -35,9 +41,9 @@ umapServer <- function(id, df = df, colour_var){
           )
         )
 
-      
+
     })
- 
+
   })
 }
 

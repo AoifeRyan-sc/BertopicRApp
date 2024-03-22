@@ -1,4 +1,4 @@
-df <- data
+
 
 ui <- fluidPage(
   theme = shinythemes::shinytheme("readable"),
@@ -7,7 +7,7 @@ ui <- fluidPage(
     shinyjs::useShinyjs(),
     navbarPage(
       "BertopicR",
-      
+      id = "main_navpage",
       tabPanel("Clustering",
                titlePanel("Clustering"),
                clusteringUi("clustering_panel")
@@ -18,6 +18,7 @@ ui <- fluidPage(
       ),
       
       tabPanel("Outlier Manipulation",
+               id = "outlier_manipulation",
                titlePanel("Outlier Manipulation"),
                
                outlierUi("outlier_panel")

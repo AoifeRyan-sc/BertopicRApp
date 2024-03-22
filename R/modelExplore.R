@@ -18,7 +18,7 @@ modelExploreUi <- function(id){
           choices = NULL,
           multiple = TRUE)
       ),
-      shiny::uiOutput(ns("summary_table")),
+      shiny::uiOutput(ns("topic_summary_display")),
       width = 6
     ),
     shiny::mainPanel(
@@ -26,7 +26,8 @@ modelExploreUi <- function(id){
         type = "tabs",
         shiny::tabPanel(
           "Documents",
-          DT::dataTableOutput(ns("doc_breakdown")),
+          # DT::dataTableOutput(ns("doc_breakdown")),
+          shiny::uiOutput(ns("doc_breakdown_display")),
           value = 1
         ),
         shiny::tabPanel(
@@ -36,7 +37,7 @@ modelExploreUi <- function(id){
         ),
         shiny::tabPanel(
           "WLO",
-          shiny::plotOutput(ns("wlo")),
+          shiny::uiOutput(ns("wlo_display")),
           value = 3
         ),
         shiny::tabPanel(
@@ -62,11 +63,11 @@ modelExploreUi <- function(id){
 #' @examples
 modelExploreServer <- function(id, model = model, df = df){
   shiny::moduleServer(id, function(input, output, session){
+    ns <- session$ns
     
-    output$summary_table <- shiny::renderUI({
+    output$topic_summary_display <- shiny::renderUI({
       if(!is.null(model())){
-        ns <- session$ns
-        DT::dataTableOutput(ns("summary_table_output"))
+        DT::dataTableOutput(ns("topic_summary"))
 
       } else {
         tagList(
@@ -76,34 +77,60 @@ modelExploreServer <- function(id, model = model, df = df){
       }
     }) # conditional display 
     
-    output$summary_table_output <- DT::renderDataTable({
+    output$topic_summary <- DT::renderDataTable({
       model()$get_topic_info() %>%
         select(-c(Representative_Docs, Representation)) %>%
         DT::datatable(rownames = FALSE,
                       selection = "single",
                       width = 4)
     })
-
-    selected_cluster <- reactive({
-      req(input$summary_table_output_rows_selected)
-      input$summary_table_output_rows_selected - 2
-    }) # topic selected in topic summary table
-
+    
+    output$doc_breakdown_display <- shiny::renderUI({
+      if(!is.null(model())){
+        DT::dataTableOutput(ns("doc_breakdown"))
+        
+      } else {
+        tagList(
+          h4("Warning: No model has been generated."),
+          p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        )
+      }
+    }) # conditional display 
+    
     output$doc_breakdown <- DT::renderDataTable({
-      model()$get_document_info(docs = df$docs) %>%
+      model()$get_document_info(docs = df()$docs) %>%
         filter(Topic == selected_cluster()) %>%
-        select(Document, Probability) %>%
+        select(Document) %>%
         DT::datatable(selection = "single")
     })
+
+    selected_cluster <- reactive({
+      req(input$topic_summary_rows_selected)
+      input$topic_summary_rows_selected - 2
+    }) # topic selected in topic summary table
     
     shiny::observeEvent(model(), {
-      named_options <- model()$get_topic_info() %>% distinct(Name)
-      topic_options <- model()$get_topic_info() %>% distinct(Topic)
-      shiny::updateSelectInput(inputId = "wlo_topic_selection", choices = c(topic_options = named_options))
+      named_options <- model()$get_topic_info() %>% distinct(Name) %>% pull(Name)
+      
+      shiny::updateSelectInput(inputId = "wlo_topic_selection", 
+                               choices = c(named_options),
+                               selected = named_options[1:2])
     })
     
+    output$wlo_display <- shiny::renderUI({
+      if(!is.null(model())){
+        shiny::plotOutput(ns("wlo"))
+        
+      } else {
+        tagList(
+          h4("Warning: No model has been generated."),
+          p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        )
+      }
+    }) # conditional display 
+    
     output$wlo <- shiny::renderPlot({
-      data <- model()$get_document_info(docs = df$docs)
+      data <- model()$get_document_info(docs = df()$docs)
       data %>% 
         dplyr::filter(Name %in% input$wlo_topic_selection) %>%
         ParseR::calculate_wlos(topic_var = Topic, 
