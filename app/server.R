@@ -15,6 +15,12 @@ server <- function(input, output, session) {
       shiny::hideTab(inputId = "main_navpage", target = "Outlier Manipulation")
     }
   })
+  
+  shiny::observe({
+    if(is.null(model())){
+      shiny::showTab(inputId = "main_navpage", target = "Outlier Manipulation")
+    }
+  })
 
   modelExploreServer("explore_model_panel", model = model, df= df)
   outlierServer("outlier_panel", df = df, model = model, clusters = clusters, embedder = embedder)

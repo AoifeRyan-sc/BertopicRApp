@@ -82,7 +82,7 @@ modellingServer_ReavtiveValues <- function(id, df){
     }) # remove model on reset
     
     shiny::observeEvent(input$do_modelling, { 
-      elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers", 
+      elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clusters", 
                                "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
       
       purrr::map(elements_to_disable, ~ shinyjs::disable(.x))
@@ -96,12 +96,11 @@ modellingServer_ReavtiveValues <- function(id, df){
     }) # enable buttons on reset
     
     output$complete_message <- renderPrint({
-      # if (input$do_modelling) { 
-      #   isolate("Model generated with paramters...")# NEED TO POPULATE THIS
-      # } else {
-      #   return("No model generated.")
-      # }
-      df %>% colnames()
+      if (input$do_modelling) {
+        isolate("Model generated with paramters...need to complete this")# NEED TO POPULATE THIS
+      } else {
+        return("No model generated.")
+      }
     })
     
     model <- shiny::reactive({
