@@ -1,10 +1,24 @@
+#' UI specs for UMAP occurrences
+#'
+#' @param id parameter for shiny identification
+#'
+#' @noRd
+#' 
 umapUi <- function(id){
-  ns <- NS(id)
-  tagList(
+  ns <- shiny::NS(id)
+  shiny::tagList(
     shiny::plotOutput(ns("cluster_plot"))
     )
 }
 
+#' UMAP Ui Server Function
+#'
+#' @param id parameter for shiny identification
+#' @param df reactive dataframe containing docs and embedding info 
+#' @param colour_var reactive list of groups vorresponding to docs in df that is the colour var in the umap
+#'
+#' @noRd
+#' 
 umapServer <- function(id, df = df, colour_var){
   # if (!is.reactive(clusters)){
   #   stop("Clusters should be a reactive variable.")
@@ -13,7 +27,7 @@ umapServer <- function(id, df = df, colour_var){
   # if (is.reactive(df)){
   #   stop("Input dataframe should not be reactive.")
   # }
-  moduleServer(id, function(input, output, session){
+  shiny::moduleServer(id, function(input, output, session){
     
     plotly::renderPlotly({
       
@@ -47,32 +61,3 @@ umapServer <- function(id, df = df, colour_var){
   })
 }
 
-umapUi_save <- function(id){
-  ns <- NS(id)
-  tagList(
-    shiny::plotOutput(ns("cluster_plot"))
-  )
-}
-
-umapServer_save <- function(id, df = df, colour_var){
-  # if (!is.reactive(clusters)){
-  #   stop("Clusters should be a reactive variable.")
-  # }
-  # 
-  # if (is.reactive(df)){
-  #   stop("Input dataframe should not be reactive.")
-  # }
-  moduleServer(id, function(input, output, session){
-    shiny::renderPlot({
-      
-      # cluster_pal <- gg_color_hue(length(unique(clusters())))
-      
-      df %>%
-        dplyr::mutate(topics = as.factor(colour_var())) %>%
-        ggplot2::ggplot(aes(x = v1, y = v2, colour = topics)) +
-        ggplot2::geom_point() +
-        # scale_color_manual(values = cluster_pal) +
-        ggplot2::theme_bw()
-    })
-  })
-}

@@ -1,14 +1,12 @@
 #' ui specs for outlier tab
 #'
-#' @param id 
+#' @param id parameter for shiny identification
 #'
-#' @return
-#' @export
+#' @noRd
 #'
-#' @examples
 outlierUi <- function(id) {
   
-  ns <- NS(id)
+  ns <- shiny::NS(id)
 
   shiny::sidebarLayout(
     shiny::sidebarPanel(
@@ -28,17 +26,18 @@ outlierUi <- function(id) {
     )
   )
 }
-#' # 
-#' #' Title
-#' #'
-#' #' @param input 
-#' #' @param output 
-#' #' @param session 
-#' #'
-#' #' @return
-#' #' @export
-#' #'
-#' #' @examples
+
+#' Outlier Ui Server Function
+#'
+#' @param input parameter for shiny identification
+#' @param output parameter for shiny identification
+#' @param session parameter for shiny identification
+#' @param df reactive dataframe containing docs and embedding info 
+#' @param clusters reactive list of clusters corresponding to docs in df
+#' @param embedder reactive (?) embedder used to create embeddings 
+#' 
+#' @noRd
+#' 
 outlierServer <- function(id, df, model, clusters, embedder){
   
   shiny::moduleServer(id, function(input, output, session){
@@ -71,7 +70,7 @@ outlierServer <- function(id, df, model, clusters, embedder){
         }
     })
     
-    new_topics <- eventReactive(outliers(), {
+    new_topics <- shiny::eventReactive(outliers(), {
       outliers()$new_topics
     })
     
@@ -79,9 +78,9 @@ outlierServer <- function(id, df, model, clusters, embedder){
       if(!is.null(model())){
         plotly::plotlyOutput(ns("outlier_plot"))
       } else{
-        tagList(
-          h4("Warning: No model has been generated."),
-          p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        shiny::tagList(
+          shiny::h4("Warning: No model has been generated."),
+          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
         )
       }
     })
@@ -90,52 +89,4 @@ outlierServer <- function(id, df, model, clusters, embedder){
 
   })
  
-}
-
-outlierServer_save <- function(id, df, model, clusters, embedder){
-  
-  shiny::moduleServer(id, function(input, output, session){
-    method <- shiny::reactive(input$outlier_method)
-    threshold <- shiny::reactive(input$outlier_threshold)
-    
-    
-    output$outlier_plot <- shiny::renderPlot({
-      
-      if (method() == "c-tf-idf"){
-        outliers <- BertopicR::bt_outliers_ctfidf(
-          # fitted_model = model,
-          fitted_model = model(),
-          documents = df$docs,
-          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-          threshold = threshold())
-      } else if (method() == "embeddings"){
-        outliers <- BertopicR::bt_outliers_embeddings(
-          # fitted_model = model,
-          fitted_model = model(),
-          documents = df$docs,
-          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-          embeddings = df$embeddings,
-          embedding_model = embedder,
-          threshold = threshold())
-      } else if (method() == "tokenset similarity"){
-        outliers <- BertopicR::bt_outliers_tokenset_similarity(
-          # fitted_model = model,
-          fitted_model = model(),
-          documents = df$docs,
-          topics = clusters(), # THIS NEEDS TO CHANGE WHEN I INTEGRATE KMEANS
-          threshold = threshold())
-      }
-      
-      colour_pal <- metafolio::gg_color_hue(length(unique(outliers$current_topics)))
-      
-      df %>%
-        dplyr::mutate(new_topics = as.factor(outliers$new_topics)) %>%
-        ggplot2::ggplot(aes(x = v1, y = v2, colour = new_topics)) +
-        ggplot2::geom_point() 
-      # +
-      #   ggplot2::scale_color_manual(values = colour_pal)
-    })
-    
-  })
-  
 }

@@ -1,13 +1,11 @@
-#' Title
+#' UI specs for Explore Model tab
 #'
-#' @param id 
+#' @param id parameter for shiny identification
 #'
-#' @return
-#' @export
-#'
-#' @examples
+#' @noRd
+#' 
 modelExploreUi <- function(id){
-  ns <- NS(id)
+  ns <- shiny::NS(id)
   shiny::sidebarLayout(
     shiny::sidebarPanel(
       shiny::conditionalPanel(
@@ -52,15 +50,13 @@ modelExploreUi <- function(id){
   )
 }
 
-#' Title
+#' Explore Model UI Server Function
 #'
-#' @param id 
-#' @param model 
+#' @param id parameter for shiny identification
+#' @param model Bertopic model created
+#' @param df reactive dataframe containing docs and embedding info 
 #'
-#' @return
-#' @export
-#'
-#' @examples
+#' @noRd
 modelExploreServer <- function(id, model = model, df = df){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
@@ -70,16 +66,16 @@ modelExploreServer <- function(id, model = model, df = df){
         DT::dataTableOutput(ns("topic_summary"))
 
       } else {
-        tagList(
-          h4("Warning: No model has been generated."),
-          p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        shiny::tagList(
+          shiny::h4("Warning: No model has been generated."),
+          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
         )
       }
     }) # conditional display 
     
     output$topic_summary <- DT::renderDataTable({
       model()$get_topic_info() %>%
-        select(-c(Representative_Docs, Representation)) %>%
+        dplyr::select(-c(Representative_Docs, Representation)) %>%
         DT::datatable(rownames = FALSE,
                       selection = "single",
                       width = 4)
@@ -90,27 +86,27 @@ modelExploreServer <- function(id, model = model, df = df){
         DT::dataTableOutput(ns("doc_breakdown"))
         
       } else {
-        tagList(
-          h4("Warning: No model has been generated."),
-          p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        shiny::tagList(
+          shiny::h4("Warning: No model has been generated."),
+          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
         )
       }
     }) # conditional display 
     
     output$doc_breakdown <- DT::renderDataTable({
       model()$get_document_info(docs = df()$docs) %>%
-        filter(Topic == selected_cluster()) %>%
-        select(Document) %>%
+        dplyr::filter(Topic == selected_cluster()) %>%
+        dplyr::select(Document) %>%
         DT::datatable(selection = "single")
     })
 
-    selected_cluster <- reactive({
-      req(input$topic_summary_rows_selected)
+    selected_cluster <- shiny::reactive({
+      shiny::req(input$topic_summary_rows_selected)
       input$topic_summary_rows_selected - 2
     }) # topic selected in topic summary table
     
     shiny::observeEvent(model(), {
-      named_options <- model()$get_topic_info() %>% distinct(Name) %>% pull(Name)
+      named_options <- model()$get_topic_info() %>% dplyr::distinct(Name) %>% dplyr::pull(Name)
       
       shiny::updateSelectInput(inputId = "wlo_topic_selection", 
                                choices = c(named_options),
@@ -122,9 +118,9 @@ modelExploreServer <- function(id, model = model, df = df){
         shiny::plotOutput(ns("wlo"))
         
       } else {
-        tagList(
-          h4("Warning: No model has been generated."),
-          p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        shiny::tagList(
+          shiny::h4("Warning: No model has been generated."),
+          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
         )
       }
     }) # conditional display 
