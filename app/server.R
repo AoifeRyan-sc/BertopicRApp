@@ -2,8 +2,10 @@
 server <- function(input, output, session) {
   
   df <- reactive({
-    data
+    data %>% select(-reduced_embeddings)
   })
+  
+  reducingServer("reducing_panel", df = df)
   
   clustering_output <- clusteringServer("clustering_panel", df = df)
   clusters <- clustering_output$clusters

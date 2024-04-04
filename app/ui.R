@@ -8,6 +8,10 @@ ui <- fluidPage(
     navbarPage(
       "BertopicR",
       id = "main_navpage",
+      # tabPanel("Reduce Embeddings",
+      #          titlePanel("Reduce Embeddings"),
+      #          reducingUi("reducing_panel")
+      # ),
       tabPanel("Clustering",
                titlePanel("Clustering"),
                clusteringUi("clustering_panel")

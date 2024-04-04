@@ -1,107 +1,100 @@
-# Example 1 ----
-datasetInput <- function(id, filter = NULL) {
-  names <- ls("package:datasets")
-  if (!is.null(filter)) {
-    data <- lapply(names, get, "package:datasets")
-    names <- names[vapply(data, filter, logical(1))]
-  }
-  
-  selectInput(NS(id, "dataset"), "Pick a dataset", choices = names)
+library(shiny)
+library(callr)
+
+head_six <- function(x, sleep) {
+  Sys.sleep(sleep)
+  head(x)
 }
 
-datasetServer <- function(id) {
-  moduleServer(id, function(input, output, session) {
-    reactive(get(input$dataset, "package:datasets"))
-  })
-}
-
-datasetApp <- function(filter = NULL) {
-  ui <- fluidPage(
-    datasetInput("dataset", filter = filter),
-    tableOutput("data")
+head_six_async <- function(x, sleep) {
+  args <- list(head_six = head_six, x = x, sleep = sleep)
+  bg_process <- callr::r_bg(
+    func = function(head_six, x, sleep) {
+      head_six(x, sleep)
+    },
+    args = args,
+    supervise = TRUE
   )
-  server <- function(input, output, session) {
-    data <- datasetServer("dataset")
-    output$data <- renderTable(head(data()))
-  }
-  shinyApp(ui = ui, server = server)
+  return(bg_process)
 }
 
-# Example 2 -----
-
-selectVarInput <- function(id) {
-  selectInput(NS(id, "var"), "Variable", choices = NULL) 
-}
-
-find_vars <- function(data, filter) {
-  names(data)[vapply(data, filter, logical(1))]
-}
-
-selectVarServer <- function(id, data, filter = is.numeric) {
-  moduleServer(id, function(input, output, session) {
-    observeEvent(data(), {
-      updateSelectInput(session, "var", choices = find_vars(data(), filter))
+mod_async_srv <- function(id, fun_async, fun_args, wait_for_event = FALSE) {
+  moduleServer( id, function(input, output, session){
+    res_rct <- shiny::reactiveVal(NULL)
+    poll_rct <- shiny::reactiveVal(TRUE)
+    
+    if (isTRUE(wait_for_event)) {
+      poll_rct(FALSE)
+    }
+    
+    bg_job <- reactive({
+      req(isTRUE(poll_rct()))
+      do.call(fun_async, fun_args)
+    }) |> bindEvent(poll_rct())
+    
+    observe({
+      req(isTRUE(poll_rct()))
+      invalidateLater(250)
+      message(sprintf("checking: %s", id))
+      
+      alive <- bg_job()$is_alive()
+      if (isFALSE(alive)) {
+        res_rct(bg_job()$get_result())
+        message(sprintf("done: %s", id))
+        poll_rct(FALSE)
+      }
     })
     
-    reactive(data()[[input$var]])
+    return(list(
+      start_job = function() poll_rct(TRUE),
+      get_result = reactive(res_rct())
+    ))
+    
   })
 }
 
-selectVarApp <- function(filter = is.numeric) {
-  ui <- fluidPage(
-    datasetInput("data", is.data.frame),
-    selectVarInput("var"),
-    verbatimTextOutput("out")
-  )
-  server <- function(input, output, session) {
-    data <- datasetServer("data")
-    var <- selectVarServer("var", data, filter = filter)
-    output$out <- renderPrint(var())
-  }
+ui <- shiny::fluidPage(
+  shiny::actionButton("go_iris", "Go Iris"),
+  shiny::verbatimTextOutput("iris"),
   
-  shinyApp(ui, server)
-}
-
-# Example 3 ----
-histogramOutput <- function(id) {
-  tagList(
-    numericInput(NS(id, "bins"), "bins", 10, min = 1, step = 1),
-    plotOutput(NS(id, "hist"))
-  )
-}
-
-
-histogramServer <- function(id, x, title = reactive("Histogram")) {
-  stopifnot(is.reactive(x))
-  stopifnot(is.reactive(title))
+  # shiny::actionButton("go_mtcars", "Go Mtcars"),
+  shiny::verbatimTextOutput("mtcars"),
   
-  moduleServer(id, function(input, output, session) {
-    output$hist <- renderPlot({
-      req(is.numeric(x()))
-      main <- paste0(title(), " [", input$bins, "]")
-      hist(x(), breaks = input$bins, main = main)
-    }, res = 96)
+  shiny::sliderInput("slider", "Observations", min= 10, max = 100, value = 50),
+  shiny::plotOutput("some_plot")
+)
+
+server <- function(input, output, session) {
+  
+  iris_result <- mod_async_srv(
+    id = "iris_srv", 
+    fun_async = "head_six_async",
+    fun_args = list(x = iris, sleep = 5),
+    wait_for_event = TRUE
+  )
+  
+  observe({
+    iris_result$start_job()
+  }) |>  bindEvent(input$go_iris)
+  
+  output$iris <- shiny::renderPrint({
+    iris_result$get_result()
+  })
+  
+  mtcars_result <- mod_async_srv(
+    id = "mtcars_srv", 
+    fun_async = "head_six_async",
+    fun_args = list(x = mtcars, sleep = 2),
+    wait_for_event = FALSE
+  )
+  
+  output$mtcars <- shiny::renderPrint({
+    mtcars_result$get_result()
+  }) 
+  
+  output$some_plot <- shiny::renderPlot({
+    hist(sample(1000, input$slider))
   })
 }
 
-histogramApp <- function() {
-  ui <- fluidPage(
-    sidebarLayout(
-      sidebarPanel(
-        datasetInput("data", is.data.frame),
-        selectVarInput("var"),
-      ),
-      mainPanel(
-        histogramOutput("hist")    
-      )
-    )
-  )
-  
-  server <- function(input, output, session) {
-    data <- datasetServer("data")
-    x <- selectVarServer("var", data)
-    histogramServer("hist", x)
-  }
-  shinyApp(ui, server)
-} 
-histogramApp()
+shiny::shinyApp(ui, server)

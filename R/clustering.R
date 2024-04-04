@@ -9,13 +9,33 @@ clusteringUi <- function(id) {
   ns <- shiny::NS(id)
   shiny::sidebarLayout(
     shiny::sidebarPanel(
-      modellingUi(ns("modelling_selection"))
+      shiny::conditionalPanel(
+        condition = "input.reducing_clustering_panels == 1", ns = ns,
+        reducingUi(ns("reduction_params"))
+      ),
+      shiny::conditionalPanel(
+        condition = "input.reducing_clustering_panels == 2", ns = ns,
+        modellingUi(ns("modelling_selection"))
+      )
        ),
     shiny::mainPanel(
-      plotly::plotlyOutput(ns("cluster_plot"))
+      shiny::tabsetPanel(
+        type = "tabs",
+        shiny::tabPanel(
+          "Reducing",
+          plotly::plotlyOutput(ns("reduce_plot")),
+          # shiny::verbatimTextOutput("reduced_embeddings_sample"),
+          value = 1
+        ),
+        shiny::tabPanel(
+          "Clustering",
+          plotly::plotlyOutput(ns("cluster_plot")),
+          value = 2
+          ),
+        id = ns("reducing_clustering_panels")
+        ) 
       )
-    ) 
-  
+    )
 }
 
 #' Clustering UI Server Function
@@ -30,13 +50,19 @@ clusteringServer <- function(id, df = df){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    modelling_outputs <- modellingServer("modelling_selection", df = df)
+    reduced_embeddings <- reducingServer("reduction_params", df = df)
+    output$reduced_embeddings_sample <- renderPrint({
+      reduced_embeddings()
+    })
+    
+    modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
     clusters <- modelling_outputs$clusters
     model <- modelling_outputs$model
     cluster_model <- modelling_outputs$cluster_model
 
     output$cluster_plot <- umapServer("umap_clustering", df = df, colour_var = clusters)
+    output$reduce_plot <- umapServer("umap_reducing", df = df, colour_var = clusters)
 
     list(clusters = clusters,
          model = model,

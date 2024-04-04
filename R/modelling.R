@@ -37,7 +37,7 @@ modellingUi <- function(id){
 #'
 #' @noRd
 #' 
-modellingServer <- function(id, df){
+modellingServer <- function(id, df, reduced_embeddings){ # do I need df?
 
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
@@ -59,7 +59,8 @@ modellingServer <- function(id, df){
     })
     
     clusters <- shiny::reactive({
-      BertopicR::bt_do_clustering(clusterer(), df()$reduced_embeddings)
+      # BertopicR::bt_do_clustering(clusterer(), df()$reduced_embeddings)
+      BertopicR::bt_do_clustering(clusterer(), reduced_embeddings())
       })
     
     shiny::observeEvent(min_cluster(), {
