@@ -49,7 +49,7 @@ modellingServer <- function(id, df, reduced_embeddings){ # do I need df?
     num_clusters <- shiny::reactive(input$n_clusters)
     select_method <- shiny::reactive(input$hdbscan_cluster_selection)
     hdb_metric <- shiny::reactive(input$hdbscan_metric)
-    
+
     clusterer <- shiny::reactive({
       if (input$cluster_method == "HDBSCAN"){
         BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
@@ -58,11 +58,15 @@ modellingServer <- function(id, df, reduced_embeddings){ # do I need df?
       }
     })
     
+    # I NEED TO REMOVE THIS
+    reduced_embeddings <- reactive({
+      df()$reduced_embeddings
+    })
+
     clusters <- shiny::reactive({
-      # BertopicR::bt_do_clustering(clusterer(), df()$reduced_embeddings)
       BertopicR::bt_do_clustering(clusterer(), reduced_embeddings())
       })
-    
+
     shiny::observeEvent(min_cluster(), {
       shiny::updateSliderInput(inputId = "min_sample_size", max = min_cluster(), value = min_cluster()*0.5)
     }) # updating slider range
@@ -70,44 +74,44 @@ modellingServer <- function(id, df, reduced_embeddings){ # do I need df?
     shiny::observeEvent(input$do_modelling, {
       r$model <- BertopicR::bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
                                 reduction_model = BertopicR::bt_empty_reducer(),
-                                clustering_model = BertopicR::clusterer())
-      BertopicR::bt_fit_model(model = r$model, documents = df()$docs, embeddings = df()$reduced_embeddings)
+                                clustering_model = clusterer())
+      BertopicR::bt_fit_model(model = r$model, documents = df()$docs, embeddings = reduced_embeddings())
     }) # model
-    
-    shiny::observeEvent(input$reset_model, {
-      r$model <- NULL
-    }) # remove model on reset
-    
-    shiny::observeEvent(input$do_modelling, { 
-      elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clusters", 
-                               "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
-      
-      purrr::map(elements_to_disable, ~ shinyjs::disable(.x))
-    }) # disable buttons
-    
-    shiny::observeEvent(input$reset_model, { 
-      elements_to_enable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers", 
-                              "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
-      
-      purrr::map(elements_to_enable, ~ shinyjs::enable(.x))
-    }) # enable buttons on reset
-    
-    output$complete_message <- shiny::renderPrint({
-      if (input$do_modelling) {
-        shiny::isolate("Model generated with paramters...need to complete this")# NEED TO POPULATE THIS
-      } else {
-        return("No model generated.")
-      }
-    })
-    
-    model <- shiny::reactive({
-      r$model
-    })
-    
-    cluster_model <- shiny::reactive({
-      input$cluster_method
-    })
-    
+
+shiny::observeEvent(input$reset_model, {
+  r$model <- NULL
+}) # remove model on reset
+
+shiny::observeEvent(input$do_modelling, {
+  elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clusters",
+                           "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+
+  purrr::map(elements_to_disable, ~ shinyjs::disable(.x))
+}) # disable buttons
+
+shiny::observeEvent(input$reset_model, {
+  elements_to_enable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers",
+                          "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+
+  purrr::map(elements_to_enable, ~ shinyjs::enable(.x))
+}) # enable buttons on reset
+
+output$complete_message <- shiny::renderPrint({
+  if (input$do_modelling) {
+    shiny::isolate("Model generated with paramters...need to complete this")# NEED TO POPULATE THIS
+  } else {
+    return("No model generated.")
+  }
+})
+
+model <- shiny::reactive({
+  r$model
+})
+
+cluster_model <- shiny::reactive({
+  input$cluster_method
+})
+
     list(clusters = clusters,
          model = model,
          cluster_model = cluster_model)

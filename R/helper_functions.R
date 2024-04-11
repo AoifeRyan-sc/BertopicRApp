@@ -1,19 +1,31 @@
-do_reducing_asyncSave <- function(reducer = reducer, embeddings = embeddings){
-  # args <- list(reducer = reducer(), df = df())
-  reducing_process <- callr::r_bg(function(reducer = reducer, embeddings = unlist(embeddings)){
-    BertopicR::bt_do_reducing(reducer = reducer, embeddings = embeddings)
-  })
-  return(reducing_process)
+reducingParamsUi <- function(id, id_num){
+  ns <- shiny::NS(id)
+  shiny::tagList(
+    shiny::div(
+      class = "row",
+      shiny::div(
+        class = "col-md-6",
+        shiny::numericInput(ns(paste0("n_neighbours", id_num)), "No. of Nearest Neighbours", value = 15)
+      ),
+      shiny::div(
+        class= "col-md-6",
+        shiny::numericInput(ns(paste0("n_components", id_num)), "No. of Dimensions", value = 5)
+      ),
+      style = "margin-top: 30px"
+    ),
+    shiny::div(
+      class = "row",
+      shiny::div(
+        class = "col-md-7",
+        shiny::numericInput(ns(paste0("min_dist", id_num)), "Min Distance Between Points", value = 0)
+      ),
+      shiny::div(
+        class= "col-md-5",
+        shiny::selectInput(ns(paste0("reducing_metric", id_num)), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
+      )
+    ),
+    shiny::actionButton(ns(paste0("do_reducing_option", id_num)), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
+                        width = "100%", style = "margin-bottom: 30px; border-width: 2px;")
+  )
 }
 
-do_reducing_async <- function(x, sleep) {
-  args <- shiny::reactiveValuesToList(list(head_six = BertopicR::bt_do_reducing, x = x, sleep = sleep))
-  bg_process <- callr::r_bg(
-    func = function(head_six, x, sleep) {
-      head_six(x, sleep)
-    },
-    args = args,
-    supervise = TRUE
-  )
-  return(bg_process)
-}

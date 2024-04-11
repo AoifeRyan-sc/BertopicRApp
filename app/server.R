@@ -2,7 +2,8 @@
 server <- function(input, output, session) {
   
   df <- reactive({
-    data %>% select(-reduced_embeddings)
+    # data %>% dplyr::select(-reduced_embeddings)
+    data
   })
   
   reducingServer("reducing_panel", df = df)
@@ -17,7 +18,7 @@ server <- function(input, output, session) {
       shiny::hideTab(inputId = "main_navpage", target = "Outlier Manipulation")
     }
   })
-  
+
   shiny::observe({
     if(is.null(model())){
       shiny::showTab(inputId = "main_navpage", target = "Outlier Manipulation")

@@ -14,23 +14,11 @@ reducingAsyncServer <- function(id,
     bg_job <- eventReactive(poll_rct(), {
       req(isTRUE(poll_rct()))
       callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
-        # tryCatch(
-        #   {
             reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours, 
                                                        n_components = n_components, 
                                                        min_dist = min_dist, 
                                                        metric = metric)
             reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
-            return(reduced_embeddings)
-          # },
-          # error = function(e) {
-          #   # Handle the error here
-          #   message("Error occurred in background process:", e$message)
-          #   # You might want to return some default value or signal the error condition
-          #   print(e)
-          #   # return(NULL)
-          # }
-        # )
           },
           args = list(n_neighbours = n_neighbours, n_components = n_components, min_dist = min_dist, metric = metric, embeddings = embeddings),
           supervise = TRUE)

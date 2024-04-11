@@ -36,39 +36,16 @@ reducingUi <- function(id){
           )
         ),
         shiny::actionButton(ns("do_reducing_option1"), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
-                            width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
-        shiny::div(
-          class = "row",
-          shiny::div(
-            class = "col-md-6",
-            shiny::numericInput(ns("n_neighbours2"), "No. of Nearest Neighbours", value = 15)
-          ),
-          shiny::div(
-            class= "col-md-6",
-            shiny::numericInput(ns("n_components2"), "No. of Dimensions", value = 5)
-          )
-        ),
-        shiny::div(
-          class = "row",
-          shiny::div(
-            class = "col-md-7",
-            shiny::numericInput(ns("min_dist2"), "Min Distance Between Points", value = 0)
-          ),
-          shiny::div(
-            class= "col-md-5",
-            shiny::selectInput(ns("reducing_metric2"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
-          )
-        ),
-        shiny::actionButton(ns("do_reducing_option2"), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
-                            width = "100%", style = "border-width: 2px;")
+                            width = "100%", style = "margin-bottom: 30px; border-width: 2px;")
       ),
       shiny::conditionalPanel(
         condition = "input.cluster_method == 'PCA'", ns = ns,
         shiny::numericInput(ns("this_is_a_test"), "This is a test", value = 0)
       ),
-      shiny::verbatimTextOutput(ns("printtest"))
+      shiny::verbatimTextOutput(ns("print_status"))
     )
 }
+
 
 #' Reducing UI server function
 #'
@@ -76,11 +53,13 @@ reducingUi <- function(id){
 #' @param df reactive dataframe containing docs and embedding info 
 #'
 #' @noRd
-reducingServer <- function(id, df){
+  reducingServer <- function(id, df){
   shiny::moduleServer(id, function(input, output, session){
     
     # ns <- session$ns
     
+    observeEvent(input$do_reducing_option1, {print("button pressed")})
+     
     reduced_embeddings1 <- reducingAsyncServer(
       id = "reduced_embeddings1", 
       n_neighbours = input$n_neighbours1, 
@@ -94,24 +73,10 @@ reducingServer <- function(id, df){
     observeEvent(input$do_reducing_option1, {
       reduced_embeddings1$start_job()
     }) 
-    # 
-    # reduced_embeddings2 <- reducingAsyncServer(
-    #   id = "reduced_embeddings2", 
-    #   n_neighbours = input$n_neighbours2, 
-    #   n_components = input$n_components2,
-    #   min_dist = input$min_dist2, 
-    #   metric = input$reducing_metric2,
-    #   embeddings = df()$embeddings,
-    #   wait_for_event = TRUE
-    # )
-    # 
-    # observeEvent(input$do_reducing_option2, {
-    #   reduced_embeddings2$start_job()
-    # })
-    # 
     
-    output$printtest <- shiny::renderPrint({
+    output$print_stats <- shiny::renderPrint({
       reduced_embeddings1$get_result()
+      # session$ns
     })
     return(
       # list(
@@ -290,4 +255,89 @@ reducingServerSave <- function(id, df){
     })
   })
   
+}
+
+
+reducingUi_2param_sets <- function(id){
+  
+  ns <- shiny::NS(id)
+  
+  shiny::tagList(
+    shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
+    shiny::conditionalPanel(
+      condition = "input.reducing_method == 'UMAP'", ns = ns,
+      shiny::div(
+        class = "row",
+        shiny::div(
+          class = "col-md-6",
+          shiny::numericInput(ns("n_neighbours1"), "No. of Nearest Neighbours", value = 15)
+        ),
+        shiny::div(
+          class= "col-md-6",
+          shiny::numericInput(ns("n_components1"), "No. of Dimensions", value = 5)
+        ),
+        style = "margin-top: 30px"
+      ),
+      shiny::div(
+        class = "row",
+        shiny::div(
+          class = "col-md-7",
+          shiny::numericInput(ns("min_dist1"), "Min Distance Between Points", value = 0)
+        ),
+        shiny::div(
+          class= "col-md-5",
+          shiny::selectInput(ns("reducing_metric1"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
+        )
+      ),
+      shiny::actionButton(ns("do_reducing_option1"), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
+                          width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
+      shiny::div(
+        class = "row",
+        shiny::div(
+          class = "col-md-6",
+          shiny::numericInput(ns("n_neighbours2"), "No. of Nearest Neighbours", value = 15)
+        ),
+        shiny::div(
+          class= "col-md-6",
+          shiny::numericInput(ns("n_components2"), "No. of Dimensions", value = 5)
+        )
+      ),
+      shiny::div(
+        class = "row",
+        shiny::div(
+          class = "col-md-7",
+          shiny::numericInput(ns("min_dist2"), "Min Distance Between Points", value = 0)
+        ),
+        shiny::div(
+          class= "col-md-5",
+          shiny::selectInput(ns("reducing_metric2"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
+        )
+      ),
+      shiny::actionButton(ns("do_reducing_option2"), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
+                          width = "100%", style = "border-width: 2px;")
+    ),
+    shiny::conditionalPanel(
+      condition = "input.cluster_method == 'PCA'", ns = ns,
+      shiny::numericInput(ns("this_is_a_test"), "This is a test", value = 0)
+    ),
+    shiny::verbatimTextOutput(ns("printtest"))
+  )
+}
+
+reducingUi_trying_to_abstract_ui_elements <- function(id){
+  
+  ns <- shiny::NS(id)
+  
+  shiny::tagList(
+    shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
+    shiny::conditionalPanel(
+      condition = "input.reducing_method == 'UMAP'", ns = ns,
+      reducingParamsUi(ns("reducing_params"), id_num = "1")
+    ),
+    shiny::conditionalPanel(
+      condition = "input.cluster_method == 'PCA'", ns = ns,
+      shiny::numericInput(ns("this_is_a_test"), "This is a test", value = 0)
+    ),
+    shiny::verbatimTextOutput(ns("printtest"))
+  )
 }

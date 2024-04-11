@@ -30,7 +30,7 @@ umapServer <- function(id, df = df, colour_var){
   shiny::moduleServer(id, function(input, output, session){
     
     plotly::renderPlotly({
-      
+
       if (-1 %in% colour_var()){
         colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var())) - 1))
       } else{
