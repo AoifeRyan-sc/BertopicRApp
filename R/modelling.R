@@ -58,11 +58,6 @@ modellingServer <- function(id, df, reduced_embeddings){ # do I need df?
       }
     })
     
-    # I NEED TO REMOVE THIS
-    reduced_embeddings <- reactive({
-      df()$reduced_embeddings
-    })
-
     clusters <- shiny::reactive({
       BertopicR::bt_do_clustering(clusterer(), reduced_embeddings())
       })

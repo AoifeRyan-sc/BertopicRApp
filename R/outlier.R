@@ -21,8 +21,9 @@ outlierUi <- function(id) {
                   value = 0.3)
     ),
     shiny::mainPanel(
-      # plotly::plotlyOutput(ns("outlier_plot"))
-      shiny::uiOutput(ns("outlier_display"))
+      shiny::uiOutput(ns("outlier_display")),
+      DT::dataTableOutput(ns("selected_outlier_data_df")),
+      shiny::downloadButton(ns("data_download_outliers"), label = "Download Data Table")
     )
   )
 }
@@ -85,7 +86,36 @@ outlierServer <- function(id, df, model, clusters, embedder){
       }
     })
 
-    output$outlier_plot <- umapServer("umap_outliers", df = df, colour_var = new_topics)
+    # output$outlier_plot <- umapServer("umap_outliers", df = df, colour_var = new_topics)
+    output$outlier_plot <- plotly::renderPlotly({
+      o <- createUmap("umap_outliers", df = df, colour_var = new_topics)
+      plotly::event_register(o, "plotly_selected")
+      o
+    })
+    
+    outlier_display_data <- shiny::reactive({
+      selected <- plotly::event_data("plotly_selected")
+      df_outlier_temp <- df() %>% 
+        dplyr::select(-c(reduced_embeddings, embeddings, v1, v2)) %>%
+        dplyr::mutate(new_topics = new_topics(),
+                      old_topcis = clusters())
+      df_outlier_temp[df_outlier_temp$rowid %in% selected$customdata, ] %>% 
+        dplyr::select(-rowid)
+    })
+    
+    output$selected_outlier_data_df <- DT::renderDataTable({
+      outlier_display_data()
+    })
+    
+    output$data_download_outliers <- shiny::downloadHandler(
+      filename = function() {
+        paste0("outlier_data_", format(Sys.time(), "%d-%m-%Y_%H:%M:%S"), ".csv")
+      },
+      content = function(file) {
+        utils::write.csv(outlier_display_data(), file, row.names = FALSE)
+      }
+    )
+    
 
   })
  

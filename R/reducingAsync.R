@@ -11,8 +11,8 @@ reducingAsyncServer <- function(id,
     }
     
     
-    bg_job <- eventReactive(poll_rct(), {
-      req(isTRUE(poll_rct()))
+    bg_job <- shiny::eventReactive(poll_rct(), {
+      shiny::req(isTRUE(poll_rct()))
       callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
             reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours, 
                                                        n_components = n_components, 
@@ -24,9 +24,9 @@ reducingAsyncServer <- function(id,
           supervise = TRUE)
     }) 
     
-    observe({
-      req(isTRUE(poll_rct()))
-      invalidateLater(250)
+    shiny::observe({
+      shiny::req(isTRUE(poll_rct()))
+      shiny::invalidateLater(250)
       message(sprintf("checking: %s", id))
       
       alive <- bg_job()$is_alive()
@@ -39,7 +39,7 @@ reducingAsyncServer <- function(id,
     
     return(list(
       start_job = function() poll_rct(TRUE),
-      get_result = reactive(res_rct())
+      get_result = shiny::reactive(res_rct())
     ))
     
   })

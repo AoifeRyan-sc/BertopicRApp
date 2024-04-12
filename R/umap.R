@@ -1,16 +1,3 @@
-#' UI specs for UMAP occurrences
-#'
-#' @param id parameter for shiny identification
-#'
-#' @noRd
-#' 
-umapUi <- function(id){
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shiny::plotOutput(ns("cluster_plot"))
-    )
-}
-
 #' UMAP Ui Server Function
 #'
 #' @param id parameter for shiny identification
@@ -19,7 +6,7 @@ umapUi <- function(id){
 #'
 #' @noRd
 #' 
-umapServer <- function(id, df = df, colour_var){
+createUmap <- function(id, df = df, colour_var){
   # if (!is.reactive(clusters)){
   #   stop("Clusters should be a reactive variable.")
   # }
@@ -27,11 +14,11 @@ umapServer <- function(id, df = df, colour_var){
   # if (is.reactive(df)){
   #   stop("Input dataframe should not be reactive.")
   # }
-  shiny::moduleServer(id, function(input, output, session){
+  # shiny::moduleServer(id, function(input, output, session){
     
-    plotly::renderPlotly({
+    # plotly::renderPlotly({
 
-      if (-1 %in% colour_var()){
+    if (-1 %in% colour_var()){
         colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var())) - 1))
       } else{
         colour_pal <- pals::stepped2(length(unique(colour_var())))
@@ -42,6 +29,7 @@ umapServer <- function(id, df = df, colour_var){
       plotly::plot_ly(x = ~v1,
                       y = ~v2,
                       color = ~topics,
+                      customdata = ~rowid,
                       type = "scatter", mode = "markers",
                       text = ~docs, hoverinfo = "text",
                       colors = colour_pal
@@ -54,10 +42,12 @@ umapServer <- function(id, df = df, colour_var){
             annotation = TRUE
           )
         )
+      
+      # plotly::event_register(p, "plotly_selected")
+      
+      # p
+    # })
 
-
-    })
-
-  })
+  # })
 }
 

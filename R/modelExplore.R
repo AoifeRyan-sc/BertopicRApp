@@ -24,7 +24,6 @@ modelExploreUi <- function(id){
         type = "tabs",
         shiny::tabPanel(
           "Documents",
-          # DT::dataTableOutput(ns("doc_breakdown")),
           shiny::uiOutput(ns("doc_breakdown_display")),
           value = 1
         ),
@@ -63,7 +62,10 @@ modelExploreServer <- function(id, model = model, df = df){
     
     output$topic_summary_display <- shiny::renderUI({
       if(!is.null(model())){
-        DT::dataTableOutput(ns("topic_summary"))
+        shiny::tagList(
+          shiny::br(),
+          DT::dataTableOutput(ns("topic_summary"))
+        )
 
       } else {
         shiny::tagList(
@@ -83,7 +85,10 @@ modelExploreServer <- function(id, model = model, df = df){
     
     output$doc_breakdown_display <- shiny::renderUI({
       if(!is.null(model())){
-        DT::dataTableOutput(ns("doc_breakdown"))
+        shiny::tagList(
+          shiny::br(),
+          DT::dataTableOutput(ns("doc_breakdown"))
+        )
         
       } else {
         shiny::tagList(
@@ -129,7 +134,7 @@ modelExploreServer <- function(id, model = model, df = df){
       data <- model()$get_document_info(docs = df()$docs)
       data %>% 
         dplyr::filter(Name %in% input$wlo_topic_selection) %>%
-        ParseR::calculate_wlos(topic_var = Topic, 
+        calculate_wlos_app(topic_var = Topic, 
                                text_var = Document,
                                filter_by = "association")
     })
