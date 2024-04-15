@@ -23,7 +23,8 @@ outlierUi <- function(id) {
     shiny::mainPanel(
       shiny::uiOutput(ns("outlier_display")),
       DT::dataTableOutput(ns("selected_outlier_data_df")),
-      shiny::downloadButton(ns("data_download_outliers"), label = "Download Data Table")
+      shiny::downloadButton(ns("data_download_outliers"), label = "Download Data Table"),
+      shiny::downloadButton(ns("download_topic_model"), label = "Download Topic Model")
     )
   )
 }
@@ -96,7 +97,7 @@ outlierServer <- function(id, df, model, clusters, embedder){
     outlier_display_data <- shiny::reactive({
       selected <- plotly::event_data("plotly_selected")
       df_outlier_temp <- df() %>% 
-        dplyr::select(-c(reduced_embeddings, embeddings, v1, v2)) %>%
+        dplyr::select(-c(embeddings, v1, v2)) %>%
         dplyr::mutate(new_topics = new_topics(),
                       old_topcis = clusters())
       df_outlier_temp[df_outlier_temp$rowid %in% selected$customdata, ] %>% 
@@ -113,6 +114,18 @@ outlierServer <- function(id, df, model, clusters, embedder){
       },
       content = function(file) {
         utils::write.csv(outlier_display_data(), file, row.names = FALSE)
+      }
+    )
+    
+    
+    output$download_topic_model <- shiny::downloadHandler(
+      filename = function() {
+        print(model())
+        paste0("topic_model", format(Sys.time(), "%d-%m-%Y_%H:%M:%S"), ".bt")
+      },
+      content = function(file) {
+        model()$save(file)
+        # utils::write.csv(model(), file, row.names = FALSE)
       }
     )
     

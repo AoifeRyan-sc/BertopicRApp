@@ -7,34 +7,44 @@
 clusteringUi <- function(id) {
 
 ns <- shiny::NS(id)
+
 shiny::tagList(
   shiny::sidebarLayout(
     shiny::sidebarPanel(
       shiny::tabsetPanel(
+        id = "data_prep_panel",
         shiny::tabPanel(
           "Upload Data",
           shiny::br(),
           shiny::fileInput(
-            "data_upload", "Upload your data", 
-            accept = c(".xlsx", ".csv", ".tsv"), multiple = FALSE)
+            ns("data_upload"), "Upload your data", 
+            accept = c(".xlsx", ".csv", ".tsv", ".rds", ".rda"), multiple = FALSE),
+          shiny::uiOutput(ns("data_upload_error_message")),
+          value = "upload"
           ),
         shiny::tabPanel(
           "Reduce Embeddings",
           shiny::br(),
-          reducingUi(ns("reduction_ui"))
+          reducingUi(ns("reduction_ui")),
+          value = "reduce"
         ),
         shiny::tabPanel(
           "Cluster",
           shiny::br(),
           modellingUi(ns("modelling_selection")),
+          value = "cluster"
           )
       ) 
     ),
   shiny::mainPanel(
+    shiny::conditionalPanel(
+      condition = "input.data_prep_panel == 'upload'", ns = ns,
+      DT::dataTableOutput(ns("uploaded_data")),
+    ),
     shiny::uiOutput(ns("cluster_plot_display")),
     DT::dataTableOutput(ns("selected_data_df")),
     shiny::downloadButton(ns("data_download_clustering"), label = "Download Data Table")
-    ) 
+    )
 )
 )
 }
@@ -46,34 +56,56 @@ shiny::tagList(
 #'
 #' @noRd
 
-clusteringServer <- function(id, df = df){
+# clusteringServer <- function(id, df = df){
+clusteringServer <- function(id){
   
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    df_for_later <- shiny::reactive({
+    df <- shiny::reactive({
       shiny::req(input$data_upload)
       
       ext <- tools::file_ext(input$data_upload$name)
       df <- switch(ext,
-                   csv = readr::read_csv(input$data_upload$datapath, skip = 2),
-                   # tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
-                   xlsx = readxl::read_xlsx(input$data_upload$datapath, skip = 2),
-                   shiny::validate("Invalid file; Please upload a .xlsx or .csv file")
+                   csv = readr::read_csv(input$data_upload$datapath),
+                   tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
+                   xlsx = readxl::read_xlsx(input$data_upload$datapath),
+                   rds = readRDS(input$data_upload$datapath),
+                   rda = readRDS(input$data_upload$datapath),
+                   shiny::validate("Invalid file; Please upload a .xlsx, .rds, .rda or .csv file")
       ) %>%
         dplyr::mutate(rowid = dplyr::row_number())
+      
     })
+    
+    output$data_upload_error_message <- shiny::renderUI({
+      
+      required_cols <- c("docs", "embeddings", "v1", "v2")  # Add your required column names here
+      missing_cols <- setdiff(required_cols, colnames(df()))
+
+      if (length(missing_cols) > 0) {
+          shiny::tagList(
+            shiny::p(HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
+        )
+      }
+    })
+    
+    output$uploaded_data <- DT::renderDataTable({
+      printdf <- df() %>% dplyr::select(-embeddings)
+      printdf
+    })
+  
     
     # I NEED TO REMOVE THIS
-    reduced_embeddings <- shiny::reactive({
-      df()$reduced_embeddings
-    })
+    # reduced_embeddings <- shiny::reactive({
+    #   df()$reduced_embeddings
+    # })
     
     # I NEED TO REACTIVATE THIS IN THE FINAL VERSION
-    # reduced_embeddings <- reducingServer("reduction_ui", df = df)
-    # output$reduced_embeddings_sample <- renderPrint({
-    #   reduced_embeddings()
-    # })
+    reduced_embeddings <- reducingServer("reduction_ui", df = df)
+    output$reduced_embeddings_sample <- renderPrint({
+      reduced_embeddings()
+    })
     
     modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
@@ -90,7 +122,7 @@ clusteringServer <- function(id, df = df){
           shiny::h4("Warning: Embedding have not been reduced."),
           shiny::p("To reduce embedding, go to the `Reduce Embeddings` tab, choose your desired parameters, and click `Reduce`.")
         )
-      }
+        }
     }) # conditional display 
 
     output$cluster_plot <- plotly::renderPlotly({
@@ -102,7 +134,7 @@ clusteringServer <- function(id, df = df){
     
     display_data <- shiny::reactive({
       selected <- plotly::event_data("plotly_selected")
-      df_temp <- df() %>% dplyr::select(-c(reduced_embeddings, embeddings, v1, v2))
+      df_temp <- df() %>% dplyr::select(-c(embeddings, v1, v2))
       df_temp[df_temp$rowid %in% selected$customdata, ] %>% 
         dplyr::select(-rowid)
     })
@@ -123,7 +155,7 @@ clusteringServer <- function(id, df = df){
     list(clusters = clusters,
          model = model,
          cluster_model = cluster_model,
-         df_for_later = df_for_later)
+         df = df)
 
   })
 }
