@@ -18,7 +18,6 @@ Imports:
     DT,
     ggplot2,
     magrittr,
-    ParseR,
     plotly,
     shiny,
     shinyjs
