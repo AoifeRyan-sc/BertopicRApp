@@ -14,10 +14,21 @@ Depends:
 LazyData: true
 Imports: 
     BertopicR,
+    callr,
     dplyr,
     DT,
     ggplot2,
+    ggrepel,
     magrittr,
+    pals,
     plotly,
+    purrr,
+    readr,
+    readxl,
+    rlang,
     shiny,
-    shinyjs
+    shinyjs,
+    tibble,
+    tidylo,
+    tidytext,
+    vroom

@@ -17,7 +17,7 @@ modelExploreUi <- function(id){
           multiple = TRUE)
       ),
       shiny::uiOutput(ns("topic_summary_display")),
-      width = 6
+      width = 4
     ),
     shiny::mainPanel(
       shiny::tabsetPanel(
@@ -29,7 +29,7 @@ modelExploreUi <- function(id){
         ),
         shiny::tabPanel(
           "UMAP",
-          plotly::plotlyOutput(ns("selected_cluster_umap")),
+          plotly::plotlyOutput(ns("model_explore_umap")),
           value = 2
         ),
         shiny::tabPanel(
@@ -44,7 +44,7 @@ modelExploreUi <- function(id){
         ),
         id = ns("model_explore_panels")
       ),
-      width = 6,
+      width = 8,
     )
   )
 }
@@ -79,8 +79,19 @@ modelExploreServer <- function(id, model = model, df = df){
       model()$get_topic_info() %>%
         dplyr::select(-c(Representative_Docs, Representation)) %>%
         DT::datatable(rownames = FALSE,
-                      selection = "single",
+                      selection = "multiple",
                       width = 4)
+    })
+    
+    selected_cluster <- shiny::reactive({
+      shiny::req(input$topic_summary_rows_selected)
+      input$topic_summary_rows_selected - 2
+    }) # topic selected in topic summary table
+    
+    df_explore_model <- shiny::reactive({
+      df() %>%
+      dplyr::mutate(topic = model()$topics_) %>%
+      dplyr::filter(topic == selected_cluster()) 
     })
     
     output$doc_breakdown_display <- shiny::renderUI({
@@ -99,16 +110,18 @@ modelExploreServer <- function(id, model = model, df = df){
     }) # conditional display 
     
     output$doc_breakdown <- DT::renderDataTable({
-      model()$get_document_info(docs = df()$docs) %>%
-        dplyr::filter(Topic == selected_cluster()) %>%
-        dplyr::select(Document) %>%
+      df_explore_model() %>%
+        dplyr::select(docs) %>%
         DT::datatable(selection = "single")
     })
-
-    selected_cluster <- shiny::reactive({
-      shiny::req(input$topic_summary_rows_selected)
-      input$topic_summary_rows_selected - 2
-    }) # topic selected in topic summary table
+    
+    output$model_explore_umap <- plotly::renderPlotly({
+      colour_var <- shiny::reactive({df_explore_model()$topic})
+      createUmap("model_explore_umap", df = df_explore_model, colour_var = colour_var,
+                 title = "UMAP of document embeddings: Topic zoom")
+      # plotly::event_register(o, "plotly_selected")
+      # o
+    })
     
     shiny::observeEvent(model(), {
       named_options <- model()$get_topic_info() %>% dplyr::distinct(Name) %>% dplyr::pull(Name)
@@ -133,7 +146,8 @@ modelExploreServer <- function(id, model = model, df = df){
     output$wlo <- shiny::renderPlot({
       data <- model()$get_document_info(docs = df()$docs)
       data %>% 
-        dplyr::filter(Name %in% input$wlo_topic_selection) %>%
+        # dplyr::filter(Name %in% input$wlo_topic_selection) %>%
+        dplyr::filter(Topic %in% selected_cluster()) %>%
         calculate_wlos_app(topic_var = Topic, 
                                text_var = Document,
                                filter_by = "association")

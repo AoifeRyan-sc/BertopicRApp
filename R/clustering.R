@@ -62,20 +62,28 @@ clusteringServer <- function(id){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
+    # df <- shiny::reactive({
+    #   shiny::req(input$data_upload)
+    #   
+    #   ext <- tools::file_ext(input$data_upload$name)
+    #   df <- switch(ext,
+    #                csv = readr::read_csv(input$data_upload$datapath),
+    #                tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
+    #                xlsx = readxl::read_xlsx(input$data_upload$datapath),
+    #                rds = readRDS(input$data_upload$datapath),
+    #                rda = readRDS(input$data_upload$datapath),
+    #                shiny::validate("Invalid file; Please upload a .xlsx, .rds, .rda or .csv file")
+    #   ) %>%
+    #     dplyr::mutate(rowid = dplyr::row_number())
+    #   
+    # })
+    
     df <- shiny::reactive({
-      shiny::req(input$data_upload)
-      
-      ext <- tools::file_ext(input$data_upload$name)
-      df <- switch(ext,
-                   csv = readr::read_csv(input$data_upload$datapath),
-                   tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
-                   xlsx = readxl::read_xlsx(input$data_upload$datapath),
-                   rds = readRDS(input$data_upload$datapath),
-                   rda = readRDS(input$data_upload$datapath),
-                   shiny::validate("Invalid file; Please upload a .xlsx, .rds, .rda or .csv file")
-      ) %>%
-        dplyr::mutate(rowid = dplyr::row_number())
-      
+    # data %>%
+    # dplyr::select(-reduced_embeddings) %>%
+    # mutate(rowid = row_number()
+      data %>%
+        dplyr::mutate(rowid = dplyr::row_number())# I NEED TO REMOVE THIS AND USE THE ABOVE
     })
     
     output$data_upload_error_message <- shiny::renderUI({
@@ -85,7 +93,7 @@ clusteringServer <- function(id){
 
       if (length(missing_cols) > 0) {
           shiny::tagList(
-            shiny::p(HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
+            shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
         )
       }
     })
@@ -97,15 +105,15 @@ clusteringServer <- function(id){
   
     
     # I NEED TO REMOVE THIS
-    # reduced_embeddings <- shiny::reactive({
-    #   df()$reduced_embeddings
-    # })
+    reduced_embeddings <- shiny::reactive({
+      df()$reduced_embeddings
+    })
     
     # I NEED TO REACTIVATE THIS IN THE FINAL VERSION
-    reduced_embeddings <- reducingServer("reduction_ui", df = df)
-    output$reduced_embeddings_sample <- renderPrint({
-      reduced_embeddings()
-    })
+    # reduced_embeddings <- reducingServer("reduction_ui", df = df)
+    # output$reduced_embeddings_sample <- renderPrint({
+    #   reduced_embeddings()
+    # })
     
     modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
@@ -126,7 +134,8 @@ clusteringServer <- function(id){
     }) # conditional display 
 
     output$cluster_plot <- plotly::renderPlotly({
-      p <- createUmap("umap_clustering", df = df, colour_var = clusters) # can remove the id here
+      p <- createUmap("umap_clustering", df = df, colour_var = clusters,
+                      title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
       plotly::event_register(p, "plotly_selected")
       p
     })

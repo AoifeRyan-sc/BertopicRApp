@@ -1,3 +1,10 @@
+#' Title
+#'
+#' @param id  parameter for shiny identification
+#' @param id_num  parameter for identification in case where function run multiple times
+#'
+#' @keywords internal
+#'
 reducingParamsUi <- function(id, id_num){
   ns <- shiny::NS(id)
   shiny::tagList(
@@ -133,4 +140,59 @@ calculate_wlos_app <- function(df, topic_var, text_var = Message, top_n = 30, fi
   
   # Add a horizontal line at y=0 with custom styling
   return(list("viz" = viz, "view" = wlos))
+}
+
+#' UMAP Ui Server Function
+#'
+#' @param id parameter for shiny identification
+#' @param df reactive dataframe containing docs and embedding info 
+#' @param colour_var reactive list of groups vorresponding to docs in df that is the colour var in the umap
+#'
+#' @noRd
+#' 
+createUmap <- function(id, df = df, colour_var, title){
+  
+  if (-1 %in% colour_var()){
+    colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var())) - 1))
+  } else{
+    colour_pal <- pals::stepped2(length(unique(colour_var())))
+  }
+  
+  
+  df() %>% dplyr::mutate(topics = as.factor(colour_var())) %>%
+    plotly::plot_ly(x = ~v1,
+                    y = ~v2,
+                    color = ~topics,
+                    customdata = ~rowid,
+                    type = "scatter", 
+                    mode = "markers",
+                    text = ~docs, 
+                    hoverinfo = "text",
+                    colors = colour_pal,
+                    marker = list(opacity = 0.7)  # Adjust marker size and opacity
+    ) %>%
+    plotly::layout(dragmode = "lasso",
+                   title = title,
+                   xaxis = list(title = "V1",
+                                showline = TRUE,
+                                linecolor = "grey80",
+                                mirror = TRUE,
+                                linewidth = 1),
+                   yaxis = list(title = "V2",
+                                showline = TRUE,
+                                linecolor = "grey80",
+                                mirror = TRUE,
+                                linewidth = 1),
+                   showlegend = TRUE,
+                   legend = list(title = "Topics")) %>%
+    plotly::config(
+      displaylogo = FALSE,
+      edits = list(
+        shapePosition = TRUE,
+        annotation = TRUE
+      )
+    )
+  
+  
+  
 }

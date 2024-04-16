@@ -2,17 +2,8 @@
 server <- function(input, output, session) {
   options(shiny.maxRequestSize=100*1024^2)
   
-  # df <- reactive({
-    # data %>% 
-    # dplyr::select(-reduced_embeddings) %>%
-    # mutate(rowid = row_number()
-  #   data %>%
-  #     dplyr::mutate(rowid = dplyr::row_number())# I NEED TO REMOVE THIS AND USE THE ABOVE
-  # })
-  
   reducingServer("reducing_panel", df = df)
   
-  # clustering_output <- clusteringServer("clustering_panel", df = df)
   clustering_output <- clusteringServer("clustering_panel")
   clusters <- clustering_output$clusters
   model <- clustering_output$model
