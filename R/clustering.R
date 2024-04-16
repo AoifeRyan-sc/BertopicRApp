@@ -1,6 +1,7 @@
 #' Ui specs for clustering tab
 #'
 #' @param id parameter for shiny identification
+#' 
 #'
 #' @noRd
 #' 
@@ -82,7 +83,8 @@ clusteringServer <- function(id){
     # data %>%
     # dplyr::select(-reduced_embeddings) %>%
     # mutate(rowid = row_number()
-      data %>%
+    # data <- readRDS("testing_data/data.rda")
+      data_test %>%
         dplyr::mutate(rowid = dplyr::row_number())# I NEED TO REMOVE THIS AND USE THE ABOVE
     })
     

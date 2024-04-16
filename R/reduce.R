@@ -65,6 +65,7 @@ reducingUi <- function(id){
 #' @param df reactive dataframe containing docs and embedding info 
 #'
 #' @noRd
+#'
   reducingServer <- function(id, df){
   shiny::moduleServer(id, function(input, output, session){
     
@@ -106,7 +107,7 @@ reducingUi <- function(id){
       reduced_embeddings1$start_job()
     }) 
     
-    output$print_stats <- shiny::renderPrint({
+    output$print_status <- shiny::renderPrint({
       reduced_embeddings1$get_result()
       # session$ns
     })

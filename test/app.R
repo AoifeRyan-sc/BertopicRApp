@@ -1,53 +1,22 @@
+ui <- fluidPage(
+  shiny::plotOutput("umap")
+)
 
-jscode <- "
-shinyjs.disableTab = function(name) {
-  var tab = $('.nav li a[data-value=' + name + ']');
-  tab.bind('click.tab', function(e) {
-    e.preventDefault();
-    return false;
-  });
-  tab.addClass('disabled');
+server <- function(input, output, session) {
+  colour_var <- reactive({sample(1:5, nrow(data_test), replace = TRUE)})
+ 
+  df_test <- reactive({data_test %>%
+      dplyr::rename(docs = message_gpt) %>%
+      dplyr::mutate(rowid = dplyr::row_number(),
+                    topic_var = colour_var())})
+  
+  output$umap <- shiny::renderPlot({
+    # print(df_test() %>% head())
+    # createUmap("umap", df = df_test, colour_var = colour_var, title = "test")
+    calculate_wlos_app(df = df_test(),
+                       topic_var = topic_var,
+                       text_var = docs)
+  })
 }
 
-shinyjs.enableTab = function(name) {
-  var tab = $('.nav li a[data-value=' + name + ']');
-  tab.unbind('click.tab');
-  tab.removeClass('disabled');
-}
-"
-
-css <- "
-.nav li a.disabled {
-  background-color: #aaa !important;
-  color: #333 !important;
-  cursor: not-allowed !important;
-  border-color: #aaa !important;
-}"
-
-library(shiny)
-library(shinyjs)
-runApp(list(
-  ui = fluidPage(
-    useShinyjs(),
-    extendShinyjs(text = jscode, functions = c("disableTab", "enableTab")),
-    inlineCSS(css),
-    tabsetPanel(
-      id = "navbar",
-      tabPanel(title = "tab1", id = "tab1",
-               br(),
-               actionButton("btn", label = "View tab2 panel")),
-      tabPanel(title = "tab2", id = "tab2")
-    )
-  ),
-  server = function(input, output, session) {
-
-    # disable tab2 on page load
-    js$disableTab("tab2")
-
-    observeEvent(input$btn, {
-      # enable tab2 when clicking the button
-      js$enableTab("tab2")
-      # switch to tab2
-      updateTabsetPanel(session, "navbar", "tab2")
-    })
-  }
+shiny::shinyApp(ui, server)
