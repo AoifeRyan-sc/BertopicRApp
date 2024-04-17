@@ -1,0 +1,48 @@
+---
+title: "Figuring out how to test"
+output: html_document
+date: "2024-04-17"
+---
+
+# Background
+Testing apps is hard and I don't know how to do it or how to even begin....
+
+
+# The Beginning...
+The first thing I want to test is the first page of my app, the file upload. To test this I think I need to figure out how to set up a testServer. I'm going to make a small dummy app here to test this.
+
+```{r}
+ui <- shiny::fluidPage(
+  shiny::fileInput("file_input", "File Input")
+)
+
+server <- function(input, output, session){
+  file <- reactive({
+    req(input$file_input)
+    readRDS(input$file_input$datapath)
+  })
+}
+
+testServer(
+  app = server,
+  args = list(),
+  exp = {
+    ns <- session$ns
+    expect_true(is.null(input$file_input$datapath))
+    session$setInputs(file_input = list(datapath = "data/example_rds.rds"))
+    expect_true(!is.null(input$file_input))
+    expect_true(is.data.frame(file()))
+  }
+)
+```
+
+Note how I have input file_input as a list with the entry named datapath. This is to imitate how the `shiny::fileInput` function receives input files in an interactive context.
+
+The big thing I don't know how to test is how the ui changes in response to reactivity in the server. For example, the default ui value has no file selected by the fileInput widget:
+
+```{r}
+ui_char <- as.character(ui)
+expect_true(stringr::str_detect(ui_char, "No file selected"))
+```
+
+But how do I check that this changes if a file is selected? I suspect I am being pedantic here - is it shiny's responsability to make sure that `fileInput` actually uploads a fileInput... this seems sensible. Maybe I should concern myself with the other 100 things I don't know how to do.

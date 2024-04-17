@@ -7,5 +7,7 @@ library(BertopicR)
 #' @export
 #'
 run_app <- function(){
-  shiny::shinyApp(ui, server)
+  appDir <- system.file("shinyapp", package = "BertopicRApp")
+  shiny::runApp(appDir, display.mode = "normal")
+  # shiny::shinyApp(ui, server)
 }

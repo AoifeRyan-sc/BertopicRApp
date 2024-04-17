@@ -72,7 +72,6 @@ shiny::tagList(
 
 # clusteringServer <- function(id, df = df){
 clusteringServer <- function(id){
-  
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
@@ -134,8 +133,8 @@ clusteringServer <- function(id){
           shiny::req(input$reduced_embeddings_upload)
 
           ext <- tools::file_ext(input$reduced_embeddings_upload$name)
-          switch(ext,
-                       csv = readr::read_csv(input$reduced_embeddings_upload$datapath),
+          reduced_embeddings <- switch(ext,
+                       csv = readr::read_csv(input$reduced_embeddings_upload$datapath, show_col_types = FALSE),
                        tsv = vroom::vroom(input$reduced_embeddings_upload$datapath, delim = "\t"),
                        xlsx = readxl::read_xlsx(input$reduced_embeddings_upload$datapath),
                        rds = readRDS(input$reduced_embeddings_upload$datapath),
@@ -144,10 +143,6 @@ clusteringServer <- function(id){
           }
 
       })
-    # reduced_embeddings <- reducingServer("reduction_ui", df = df)
-    # output$reduced_embeddings_sample <- renderPrint({
-    #   reduced_embeddings()
-    # })
     
     modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
@@ -156,8 +151,7 @@ clusteringServer <- function(id){
     cluster_model <- modelling_outputs$cluster_model
 
     output$cluster_plot_display <- shiny::renderUI({
-      if(!is.null(reduced_embeddings())){
-        print(reduced_embeddings())
+      if (!is.null(df())) {
        plotly::plotlyOutput(ns("cluster_plot"))
         
       } else {
@@ -170,19 +164,18 @@ clusteringServer <- function(id){
   
 
     output$cluster_plot <- plotly::renderPlotly({
-      # print(clusters())
-      p <- createUmap("umap_clustering", df = df, colour_var = clusters,
+      createUmap("umap_clustering", df = df, colour_var = clusters,
                       title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
-      # plotly::event_register(p, "plotly_selected")
-      # p
     })
     
     
     display_data <- shiny::reactive({
-      selected <- plotly::event_data("plotly_selected")
+      shiny::req(reduced_embeddings()) # delaying this to avoid error message
+      selected <- plotly::event_data(event = "plotly_selected", source = "umap_clustering")
       df_temp <- df() %>% dplyr::select(-c(embeddings, v1, v2))
-      df_temp[df_temp$rowid %in% selected$customdata, ] %>% 
+      df_temp[df_temp$rowid %in% selected$customdata, ] %>%
         dplyr::select(-rowid)
+      
     })
 
     output$selected_data_df <- DT::renderDataTable({

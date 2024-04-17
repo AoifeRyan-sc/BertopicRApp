@@ -97,12 +97,13 @@ outlierServer <- function(id, df, model, clusters, embedder){
     output$outlier_plot <- plotly::renderPlotly({
       o <- createUmap("umap_outliers", df = df, colour_var = new_topics,
                       title = "UMAP of document embeddings: Reassigning outliers")
-      plotly::event_register(o, "plotly_selected")
-      o
+      # plotly::event_register(o, "plotly_selected")
+      # o
     })
     
     outlier_display_data <- shiny::reactive({
-      selected <- plotly::event_data("plotly_selected")
+      shiny::req(model())
+      selected <- plotly::event_data("plotly_selected", source = "umap_outliers")
       df_outlier_temp <- df() %>% 
         dplyr::select(-c(embeddings, v1, v2)) %>%
         dplyr::mutate(new_topics = new_topics(),

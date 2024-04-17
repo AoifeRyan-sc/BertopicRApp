@@ -150,7 +150,7 @@ calculate_wlos_app <- function(df, topic_var, text_var = Message, top_n = 30, fi
 #'
 #' @noRd
 #' 
-createUmap <- function(id, df = df, colour_var, title){
+createUmap <- function(source_id, df = df, colour_var, title){
   
   if (-1 %in% colour_var()){
     colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var())) - 1))
@@ -169,8 +169,8 @@ createUmap <- function(id, df = df, colour_var, title){
                     text = ~docs, 
                     hoverinfo = "text",
                     colors = colour_pal,
-                    marker = list(opacity = 0.7)  # Adjust marker size and opacity
-    ) %>%
+                    marker = list(opacity = 0.7),  # Adjust marker size and opacity
+                    source = source_id) %>%
     plotly::layout(dragmode = "lasso",
                    title = title,
                    xaxis = list(title = "V1",
