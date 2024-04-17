@@ -2,7 +2,7 @@
 server <- function(input, output, session) {
   options(shiny.maxRequestSize=100*1024^2)
   
-  reducingServer("reducing_panel", df = df)
+  # reducingServer("reducing_panel", df = df)
   
   clustering_output <- clusteringServer("clustering_panel")
   clusters <- clustering_output$clusters

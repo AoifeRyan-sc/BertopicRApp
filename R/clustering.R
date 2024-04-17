@@ -13,14 +13,15 @@ shiny::tagList(
   shiny::sidebarLayout(
     shiny::sidebarPanel(
       shiny::tabsetPanel(
-        id = "data_prep_panel",
+        id = ns("data_prep_panel"),
         shiny::tabPanel(
           "Upload Data",
           shiny::br(),
           shiny::fileInput(
             ns("data_upload"), "Upload your data", 
-            accept = c(".xlsx", ".csv", ".tsv", ".rds", ".rda"), multiple = FALSE),
+            accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
           shiny::uiOutput(ns("data_upload_error_message")),
+          shiny::verbatimTextOutput(ns("reduced_embeddings_sample")),
           value = "upload"
           ),
         shiny::tabPanel(
@@ -63,30 +64,29 @@ clusteringServer <- function(id){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    # df <- shiny::reactive({
-    #   shiny::req(input$data_upload)
-    #   
-    #   ext <- tools::file_ext(input$data_upload$name)
-    #   df <- switch(ext,
-    #                csv = readr::read_csv(input$data_upload$datapath),
-    #                tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
-    #                xlsx = readxl::read_xlsx(input$data_upload$datapath),
-    #                rds = readRDS(input$data_upload$datapath),
-    #                rda = readRDS(input$data_upload$datapath),
-    #                shiny::validate("Invalid file; Please upload a .xlsx, .rds, .rda or .csv file")
-    #   ) %>%
-    #     dplyr::mutate(rowid = dplyr::row_number())
-    #   
-    # })
-    
     df <- shiny::reactive({
-    # data %>%
-    # dplyr::select(-reduced_embeddings) %>%
-    # mutate(rowid = row_number()
-    # data <- readRDS("testing_data/data.rda")
-      data_test %>%
-        dplyr::mutate(rowid = dplyr::row_number())# I NEED TO REMOVE THIS AND USE THE ABOVE
+      shiny::req(input$data_upload)
+
+      ext <- tools::file_ext(input$data_upload$name)
+      df <- switch(ext,
+                   csv = readr::read_csv(input$data_upload$datapath),
+                   tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
+                   xlsx = readxl::read_xlsx(input$data_upload$datapath),
+                   rds = readRDS(input$data_upload$datapath),
+                   shiny::validate("Invalid file; Please upload a .xlsx, .rds, .rda or .csv file")
+      ) %>%
+        dplyr::mutate(rowid = dplyr::row_number())
+
     })
+    
+    # df <- shiny::reactive({
+    # # data %>%
+    # # dplyr::select(-reduced_embeddings) %>%
+    # # mutate(rowid = row_number()
+    # # data <- readRDS("testing_data/data.rda")
+    #   data_test %>%
+    #     dplyr::mutate(rowid = dplyr::row_number())# I NEED TO REMOVE THIS AND USE THE ABOVE
+    # })
     
     output$data_upload_error_message <- shiny::renderUI({
       
@@ -107,15 +107,16 @@ clusteringServer <- function(id){
   
     
     # I NEED TO REMOVE THIS
-    reduced_embeddings <- shiny::reactive({
-      df()$reduced_embeddings
-    })
+    # reduced_embeddings <- shiny::reactive({
+    #   df()$reduced_embeddings
+    # })
     
     # I NEED TO REACTIVATE THIS IN THE FINAL VERSION
-    # reduced_embeddings <- reducingServer("reduction_ui", df = df)
-    # output$reduced_embeddings_sample <- renderPrint({
-    #   reduced_embeddings()
-    # })
+    reduced_embeddings <- shiny::reactiveVal(NULL, label = "reduced_embeddings_initial_val")
+    reduced_embeddings <- reducingServer("reduction_ui", df = df)
+    output$reduced_embeddings_sample <- renderPrint({
+      reduced_embeddings()
+    })
     
     modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
@@ -126,10 +127,13 @@ clusteringServer <- function(id){
     output$cluster_plot_display <- shiny::renderUI({
       if(!is.null(reduced_embeddings())){
        plotly::plotlyOutput(ns("cluster_plot"))
+        print("is not null reduced embeddings")
+        print(reduced_embeddings())
         
       } else {
+        print("is null reduced embeddings")
         shiny::tagList(
-          shiny::h4("Warning: Embedding have not been reduced."),
+          shiny::h4("Warning: Embeddings have not been reduced."),
           shiny::p("To reduce embedding, go to the `Reduce Embeddings` tab, choose your desired parameters, and click `Reduce`.")
         )
         }

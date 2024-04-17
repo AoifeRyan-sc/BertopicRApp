@@ -75,6 +75,7 @@ reducingUi <- function(id){
      
     reduced_embeddings1 <- shiny::reactive({
       if (input$load_or_reduce_embeddings == "Calculate in app"){
+        print(df())
         reducingAsyncServer(
           id = "reduced_embeddings1", 
           n_neighbours = input$n_neighbours1, 
