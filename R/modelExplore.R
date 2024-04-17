@@ -24,21 +24,25 @@ modelExploreUi <- function(id){
         type = "tabs",
         shiny::tabPanel(
           "Documents",
+          shiny::br(),
           shiny::uiOutput(ns("doc_breakdown_display")),
           value = 1
         ),
         shiny::tabPanel(
           "UMAP",
+          shiny::br(),
           plotly::plotlyOutput(ns("model_explore_umap")),
           value = 2
         ),
         shiny::tabPanel(
           "WLO",
+          shiny::br(),
           shiny::uiOutput(ns("wlo_display")),
           value = 3
         ),
         shiny::tabPanel(
           "Representation",
+          shiny::br(),
           shiny::plotOutput(ns("representation")),
           value = 4
         ),

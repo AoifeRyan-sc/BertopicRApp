@@ -9,17 +9,17 @@ reducingUi <- function(id){
   ns <- shiny::NS(id)
   
   shiny::tagList(
-    shiny::radioButtons(ns("load_or_reduce_embeddings"), 
-                        "Do you want to load pre-calculate reduced embeddings or do it here?",
-                        choices = c("Load in reduced embeddings", 
-                                    "Calculate in app")),
-    shiny::conditionalPanel(
-      condition = "input.load_or_reduce_embeddings == 'Load in reduced embeddings'", ns = ns,
-      shiny::fileInput(ns("reduced_embeddings_upload"), "Upload Reduced Embeddings",
-                       accept = c(".xlsx", ".csv", ".tsv", ".rds", ".rda"), multiple = FALSE)
-    ),
-    shiny::conditionalPanel(
-      condition = "input.load_or_reduce_embeddings == 'Calculate in app'", ns = ns,
+    # shiny::radioButtons(ns("load_or_reduce_embeddings"), 
+    #                     "Do you want to load pre-calculate reduced embeddings or do it here?",
+    #                     choices = c("Load in reduced embeddings", 
+    #                                 "Calculate in app")),
+    # shiny::conditionalPanel(
+    #   condition = "input.load_or_reduce_embeddings == 'Load in reduced embeddings'", ns = ns,
+    #   shiny::fileInput(ns("reduced_embeddings_upload"), "Upload Reduced Embeddings",
+    #                    accept = c(".xlsx", ".csv", ".tsv", ".rds", ".rda"), multiple = FALSE)
+    # ),
+    # shiny::conditionalPanel(
+      # condition = "input.load_or_reduce_embeddings == 'Calculate in app'", ns = ns,
       shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
       shiny::conditionalPanel(
         condition = "input.reducing_method == 'UMAP'", ns = ns,
@@ -52,7 +52,7 @@ reducingUi <- function(id){
       shiny::conditionalPanel(
         condition = "input.cluster_method == 'PCA'", ns = ns,
         shiny::numericInput(ns("this_is_a_test"), "This is a test", value = 0)
-      )
+      # )
       ),
       shiny::verbatimTextOutput(ns("print_status"))
     )
@@ -73,36 +73,45 @@ reducingUi <- function(id){
     
     shiny::observeEvent(input$do_reducing_option1, {print("button pressed")})
      
-    reduced_embeddings1 <- shiny::reactive({
-      if (input$load_or_reduce_embeddings == "Calculate in app"){
-        print(df())
-        reducingAsyncServer(
-          id = "reduced_embeddings1", 
-          n_neighbours = input$n_neighbours1, 
-          n_components = input$n_components1,
-          min_dist = input$min_dist1, 
-          metric = input$reducing_metric1,
-          embeddings = df()$embeddings,
-          wait_for_event = TRUE
-        )
-      } else {
-        df <- shiny::reactive({
-          shiny::req(input$reduced_embeddings_upload)
-
-          ext <- tools::file_ext(input$reduced_embeddings_upload$name)
-          switch(ext,
-                       csv = readr::read_csv(input$data_upload$datapath),
-                       tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
-                       xlsx = readxl::read_xlsx(input$data_upload$datapath),
-                       rds = readRDS(input$data_upload$datapath),
-                       rda = readRDS(input$data_upload$datapath),
-                       shiny::validate("Invalid file; Please upload a .xlsx, .rds, .rda or .csv file")
-          )
-
-        })
-      }
-     
-    })
+    # reduced_embeddings1 <- shiny::reactive({
+    #   if (input$load_or_reduce_embeddings == "Calculate in app"){
+    #     reducingAsyncServer(
+    #       id = "reduced_embeddings1",
+    #       n_neighbours = input$n_neighbours1,
+    #       n_components = input$n_components1,
+    #       min_dist = input$min_dist1,
+    #       metric = input$reducing_metric1,
+    #       embeddings = df()$embeddings,
+    #       wait_for_event = TRUE
+    #     )
+    #     
+    #   } else {
+    #     
+    #     shiny::req(input$reduced_embeddings_upload)
+    # 
+    #     ext <- tools::file_ext(input$reduced_embeddings_upload$name)
+    #     reduced <- switch(ext,
+    #                  csv = readr::read_csv(input$data_upload$datapath),
+    #                  tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
+    #                  xlsx = readxl::read_xlsx(input$data_upload$datapath),
+    #                  rds = readRDS(input$data_upload$datapath),
+    #                  shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
+    #     )
+    # 
+    #     list(get_result = reduced)
+    #   }
+    # 
+    # })
+    
+    reduced_embeddings1 <- reducingAsyncServer(
+      id = "reduced_embeddings1",
+      n_neighbours = input$n_neighbours1,
+      n_components = input$n_components1,
+      min_dist = input$min_dist1,
+      metric = input$reducing_metric1,
+      embeddings = df()$embeddings,
+      wait_for_event = TRUE
+    )
       
     shiny::observeEvent(input$do_reducing_option1, {
       reduced_embeddings1$start_job()

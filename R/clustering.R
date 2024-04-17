@@ -27,7 +27,19 @@ shiny::tagList(
         shiny::tabPanel(
           "Reduce Embeddings",
           shiny::br(),
-          reducingUi(ns("reduction_ui")),
+          shiny::radioButtons(ns("load_or_reduce_embeddings"),
+                              "Do you want to load pre-calculate reduced embeddings or do it here?",
+                              choices = c("Load in reduced embeddings",
+                                          "Calculate in app")),
+          shiny::conditionalPanel(
+            condition = "input.load_or_reduce_embeddings == 'Load in reduced embeddings'", ns = ns,
+            shiny::fileInput(ns("reduced_embeddings_upload"), "Upload Reduced Embeddings",
+                             accept = c(".xlsx", ".csv", ".tsv", ".rds", ".rda"), multiple = FALSE)
+          ),
+          shiny::conditionalPanel(
+          condition = "input.load_or_reduce_embeddings == 'Calculate in app'", ns = ns,
+          reducingUi(ns("reduction_ui"))
+          ),
           value = "reduce"
         ),
         shiny::tabPanel(
@@ -73,7 +85,7 @@ clusteringServer <- function(id){
                    tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
                    xlsx = readxl::read_xlsx(input$data_upload$datapath),
                    rds = readRDS(input$data_upload$datapath),
-                   shiny::validate("Invalid file; Please upload a .xlsx, .rds, .rda or .csv file")
+                   shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
       ) %>%
         dplyr::mutate(rowid = dplyr::row_number())
 
@@ -112,11 +124,30 @@ clusteringServer <- function(id){
     # })
     
     # I NEED TO REACTIVATE THIS IN THE FINAL VERSION
-    reduced_embeddings <- shiny::reactiveVal(NULL, label = "reduced_embeddings_initial_val")
-    reduced_embeddings <- reducingServer("reduction_ui", df = df)
-    output$reduced_embeddings_sample <- renderPrint({
-      reduced_embeddings()
-    })
+    reduced_embeddings <- shiny::reactive({
+        if (input$load_or_reduce_embeddings == "Calculate in app"){
+          
+          reducingServer("reduction_ui", df = df)
+
+        } else {
+
+          shiny::req(input$reduced_embeddings_upload)
+
+          ext <- tools::file_ext(input$reduced_embeddings_upload$name)
+          switch(ext,
+                       csv = readr::read_csv(input$reduced_embeddings_upload$datapath),
+                       tsv = vroom::vroom(input$reduced_embeddings_upload$datapath, delim = "\t"),
+                       xlsx = readxl::read_xlsx(input$reduced_embeddings_upload$datapath),
+                       rds = readRDS(input$reduced_embeddings_upload$datapath),
+                       shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
+          )
+          }
+
+      })
+    # reduced_embeddings <- reducingServer("reduction_ui", df = df)
+    # output$reduced_embeddings_sample <- renderPrint({
+    #   reduced_embeddings()
+    # })
     
     modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
@@ -126,24 +157,24 @@ clusteringServer <- function(id){
 
     output$cluster_plot_display <- shiny::renderUI({
       if(!is.null(reduced_embeddings())){
-       plotly::plotlyOutput(ns("cluster_plot"))
-        print("is not null reduced embeddings")
         print(reduced_embeddings())
+       plotly::plotlyOutput(ns("cluster_plot"))
         
       } else {
-        print("is null reduced embeddings")
         shiny::tagList(
           shiny::h4("Warning: Embeddings have not been reduced."),
           shiny::p("To reduce embedding, go to the `Reduce Embeddings` tab, choose your desired parameters, and click `Reduce`.")
         )
         }
     }) # conditional display 
+  
 
     output$cluster_plot <- plotly::renderPlotly({
+      # print(clusters())
       p <- createUmap("umap_clustering", df = df, colour_var = clusters,
                       title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
-      plotly::event_register(p, "plotly_selected")
-      p
+      # plotly::event_register(p, "plotly_selected")
+      # p
     })
     
     
