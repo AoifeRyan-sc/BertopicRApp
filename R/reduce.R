@@ -72,36 +72,6 @@ reducingUi <- function(id){
     # ns <- session$ns
     
     shiny::observeEvent(input$do_reducing_option1, {print("button pressed")})
-     
-    # reduced_embeddings1 <- shiny::reactive({
-    #   if (input$load_or_reduce_embeddings == "Calculate in app"){
-    #     reducingAsyncServer(
-    #       id = "reduced_embeddings1",
-    #       n_neighbours = input$n_neighbours1,
-    #       n_components = input$n_components1,
-    #       min_dist = input$min_dist1,
-    #       metric = input$reducing_metric1,
-    #       embeddings = df()$embeddings,
-    #       wait_for_event = TRUE
-    #     )
-    #     
-    #   } else {
-    #     
-    #     shiny::req(input$reduced_embeddings_upload)
-    # 
-    #     ext <- tools::file_ext(input$reduced_embeddings_upload$name)
-    #     reduced <- switch(ext,
-    #                  csv = readr::read_csv(input$data_upload$datapath),
-    #                  tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
-    #                  xlsx = readxl::read_xlsx(input$data_upload$datapath),
-    #                  rds = readRDS(input$data_upload$datapath),
-    #                  shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
-    #     )
-    # 
-    #     list(get_result = reduced)
-    #   }
-    # 
-    # })
     
     reduced_embeddings1 <- reducingAsyncServer(
       id = "reduced_embeddings1",

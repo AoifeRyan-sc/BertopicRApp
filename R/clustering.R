@@ -90,15 +90,6 @@ clusteringServer <- function(id){
 
     })
     
-    # df <- shiny::reactive({
-    # # data %>%
-    # # dplyr::select(-reduced_embeddings) %>%
-    # # mutate(rowid = row_number()
-    # # data <- readRDS("testing_data/data.rda")
-    #   data_test %>%
-    #     dplyr::mutate(rowid = dplyr::row_number())# I NEED TO REMOVE THIS AND USE THE ABOVE
-    # })
-    
     output$data_upload_error_message <- shiny::renderUI({
       
       required_cols <- c("docs", "embeddings", "v1", "v2")  # Add your required column names here
@@ -115,35 +106,29 @@ clusteringServer <- function(id){
       printdf <- df() %>% dplyr::select(-embeddings)
       printdf
     })
-  
     
-    # I NEED TO REMOVE THIS
-    # reduced_embeddings <- shiny::reactive({
-    #   df()$reduced_embeddings
-    # })
+    reduced_embeddings_calculated <- reducingServer("reduction_ui", df = df)
+    reduced_embeddings_loaded <- shiny::reactive({
+      shiny::req(input$reduced_embeddings_upload)
+
+            ext <- tools::file_ext(input$reduced_embeddings_upload$name)
+            reduced_embeddings <- switch(ext,
+                         csv = readr::read_csv(input$reduced_embeddings_upload$datapath, show_col_types = FALSE),
+                         tsv = vroom::vroom(input$reduced_embeddings_upload$datapath, delim = "\t"),
+                         xlsx = readxl::read_xlsx(input$reduced_embeddings_upload$datapath),
+                         rds = readRDS(input$reduced_embeddings_upload$datapath),
+                         shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
+            )
+    })
     
-    # I NEED TO REACTIVATE THIS IN THE FINAL VERSION
-    reduced_embeddings <- shiny::reactive({
-        if (input$load_or_reduce_embeddings == "Calculate in app"){
-          
-          reducingServer("reduction_ui", df = df)
+    reduced_embeddings <- reactive({
+      if (input$load_or_reduce_embeddings == "Calculate in app"){
+        reduced_embeddings_calculated()
+      } else {
+        reduced_embeddings_loaded()
+      }
+    })
 
-        } else {
-
-          shiny::req(input$reduced_embeddings_upload)
-
-          ext <- tools::file_ext(input$reduced_embeddings_upload$name)
-          reduced_embeddings <- switch(ext,
-                       csv = readr::read_csv(input$reduced_embeddings_upload$datapath, show_col_types = FALSE),
-                       tsv = vroom::vroom(input$reduced_embeddings_upload$datapath, delim = "\t"),
-                       xlsx = readxl::read_xlsx(input$reduced_embeddings_upload$datapath),
-                       rds = readRDS(input$reduced_embeddings_upload$datapath),
-                       shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
-          )
-          }
-
-      })
-    
     modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
     clusters <- modelling_outputs$clusters
@@ -164,6 +149,7 @@ clusteringServer <- function(id){
   
 
     output$cluster_plot <- plotly::renderPlotly({
+      shiny::req(is.array(reduced_embeddings()) | is.data.frame(reduced_embeddings()))
       createUmap("umap_clustering", df = df, colour_var = clusters,
                       title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
     })

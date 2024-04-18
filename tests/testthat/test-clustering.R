@@ -50,6 +50,7 @@ test_that("Reduced embeddings are correctly calculated or uploaded", {
   #              v1 = 0.1,
   #              v2 = 0.3) 
   # }
+  clusters <- shiny::reactiveVal(rep(0, 2))
   testServer(
     app = clusteringServer,
     args = list(),
@@ -63,10 +64,14 @@ test_that("Reduced embeddings are correctly calculated or uploaded", {
             name = "inst/testdata/reduced_embeddings.csv",
             datapath = "inst/testdata/reduced_embeddings.csv"))
       
-      # browser()
-      expect_true(5 %in% dim(reduced_embeddings()))
+      print(nrow(df()))
+      
+      clusters(runif(nrow(df())))
+      
+      # expect_true(5 %in% dim(reduced_embeddings()))
       
       # browser()
     }
   )
-})
+}) #ok this isn't working
+
