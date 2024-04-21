@@ -1,4 +1,4 @@
-test_that("Test reducingUi works as expected", {
+test_that("Test modelExploreUi works as expected", {
   ui <- modelExploreUi(id = "test")
   
   # browser()
@@ -6,47 +6,35 @@ test_that("Test reducingUi works as expected", {
   
   # checking html 
   ui_char <- as.character(ui)
-  expect_equal(stringr::str_count(ui_char, "div"), 34)
-  expect_equal(stringr::str_count(ui_char, "input-select"), 2)
-  expect_equal(stringr::str_count(ui_char, "shiny-panel-conditional"), 2)
-  expect_equal(stringr::str_count(ui_char, "action-button"), 1)
-  expect_equal(stringr::str_count(ui_char, "type=\"number\""), 4)
-  
-  # If I build out the PCA options I should probably update this - or is this test pedantic?
+  expect_equal(stringr::str_count(ui_char, "div"), 28)
+  expect_equal(stringr::str_count(ui_char, "data-toggle=\"tab\""), 4)
+  expect_true(stringr::str_detect(ui_char, "class=\"well\" role=\"complementary\"") &
+                 stringr::str_detect(ui_char, "class=\"col-sm-8\" role=\"main\""))
+
 })
 
-test_that("ReducingServer calculates reduced emeddings and returns them", {
-  # this is a working progress in working_docs/shiny-testing.Rmd but I am struggling
+test_that("modelExploreServer calculates reduced emeddings and returns them", {
+  
+  df <- reactive({
+    data.frame(docs = c("this is a doc", "this is another doc"),
+               v1 = c(0.1, 0.2),
+               v2 = c(0.3, 0.4)) %>%
+      dplyr::mutate(embeddings = matrix(runif(10), nrow = 2))
+  }) 
+  model <- reactive({
+    model = bt_compile_model(embedding_model = bt_empty_embedder(),
+                             reduction_model = bt_empty_reducer())
+    bt_fit_model(model, df()$docs, df()$embeddings)
+    })
+  
   testServer(
-    app = reducingServer,
+    app = modelExploreServer,
     args = list(id = "test",
-                df = df),
+                df = df,
+                model = model),
     exp = {
-      # library(BertopicR)
-      # inputs to the reduceServer
-      session$setInputs(
-        n_neighbours1 = 10,
-        n_components1 = 5,
-        min_dist1 = 0.0,
-        reducing_metric1 = "cosine",
-        do_reducing_option1 = NULL,
-        `backgroundReduce-n_neighbours` = 10,
-        `backgroundReduce-n_components` = 5,
-        `backgroundReduce-min_dist` = 0.0,
-        `backgroundReduce-reducing_metric` = "cosine",
-        `backgroundReduce-embeddings` = df()$embeddings,
-        `backgroundReduce-wait_for_event` = TRUE,
-      )
-      
+      expect_true(grepl("datatables", output$topic_summary_display$html))
       browser()
-      session$setInputs(do_reducing_option1 = 1)
-      session$elapse(millis = 10000)
-      # print(reduced_embeddings1$get_result())
-      # Sys.sleep(10)
-      # browser()
-      print(reduced_embeddings1$get_result())
-      # browser()
-      # expect_true(inherits(reduced_embeddings(), "data.frame"))
     }
   )
 })
