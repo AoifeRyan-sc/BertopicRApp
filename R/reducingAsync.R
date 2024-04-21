@@ -1,18 +1,17 @@
-reducingAsyncServer <- function(id, 
+backgroundReduce <- function(id, 
                                 n_neighbours, n_components, min_dist, metric,
                                 embeddings, wait_for_event = TRUE) {
   shiny::moduleServer( id, function(input, output, session){
     ns <- session$ns
-    res_rct <- shiny::reactiveVal(NULL)
-    poll_rct <- shiny::reactiveVal(FALSE)
+    job_result <- shiny::reactiveVal(NULL)
+    trigger_job <- shiny::reactiveVal(FALSE)
     
     if (isFALSE(wait_for_event)) {
-      poll_rct(TRUE)
+      trigger_job(TRUE)
     }
     
-    
-    bg_job <- shiny::eventReactive(poll_rct(), {
-      shiny::req(isTRUE(poll_rct()))
+    bg_job <- shiny::eventReactive(trigger_job(), {
+      shiny::req(isTRUE(trigger_job()))
       callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
             reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours, 
                                                        n_components = n_components, 
@@ -25,21 +24,22 @@ reducingAsyncServer <- function(id,
     }) 
     
     shiny::observe({
-      shiny::req(isTRUE(poll_rct()))
+      shiny::req(isTRUE(trigger_job()))
       shiny::invalidateLater(250)
       message(sprintf("checking: %s", id))
       
       alive <- bg_job()$is_alive()
       if (isFALSE(alive)) {
-        res_rct(bg_job()$get_result())
+        job_result(bg_job()$get_result())
         message(sprintf("done: %s", id))
-        poll_rct(FALSE)
+        trigger_job(FALSE)
       }
     })
     
     return(list(
-      start_job = function() poll_rct(TRUE),
-      get_result = shiny::reactive(res_rct())
+      start_job = function() trigger_job(TRUE),
+      get_result = shiny::reactive(job_result()),
+      is_alive = shiny::reactive(bg_job()$is_alive())
     ))
     
   })

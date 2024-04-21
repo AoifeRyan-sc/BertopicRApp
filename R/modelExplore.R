@@ -8,14 +8,6 @@ modelExploreUi <- function(id){
   ns <- shiny::NS(id)
   shiny::sidebarLayout(
     shiny::sidebarPanel(
-      shiny::conditionalPanel(
-        condition = "input.model_explore_panels == 3", ns = ns,
-        shiny::selectInput(
-          inputId = ns("wlo_topic_selection"),
-          label = "Topics to Compare",
-          choices = NULL,
-          multiple = TRUE)
-      ),
       shiny::uiOutput(ns("topic_summary_display")),
       width = 4
     ),

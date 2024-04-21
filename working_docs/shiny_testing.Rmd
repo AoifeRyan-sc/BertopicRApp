@@ -46,3 +46,371 @@ expect_true(stringr::str_detect(ui_char, "No file selected"))
 ```
 
 But how do I check that this changes if a file is selected? I suspect I am being pedantic here - is it shiny's responsability to make sure that `fileInput` actually uploads a fileInput... this seems sensible. Maybe I should concern myself with the other 100 things I don't know how to do.
+
+## Trying some things from the shiny book
+
+Here is a ui and server function:
+```{r}
+summaryUI <- function(id) {
+  tagList(
+    outputText(ns(id, "min")),
+    outputText(ns(id, "mean")),
+    outputText(ns(id, "max")),
+  )
+}
+summaryServer <- function(id, var) {
+  stopifnot(is.reactive(var))
+  
+  moduleServer(id, function(input, output, session) {
+    range_val <- reactive(range(var(), na.rm = TRUE))
+    output$min <- renderText(range_val()[[1]])
+    output$max <- renderText(range_val()[[2]])
+    output$mean <- renderText(mean(var()))
+  })
+}
+
+```
+
+Here are some tests:
+```{r}
+x <- reactiveVal(1:10)
+testServer(summaryServer, args = list(var = x), {
+  print(range_val())
+  print(output$min)
+})
+#> [1]  1 10
+#> [1] "1"
+#> 
+
+test_that("output updates when reactive input changes", {
+  x <- reactiveVal()
+  testServer(summaryServer, args = list(var = x), {
+    x(1:10)
+    browser()
+    session$flushReact()
+    expect_equal(range_val(), c(1, 10))
+    expect_equal(output$mean, "5.5")
+    
+    x(10:20)
+    session$flushReact()
+    expect_equal(range_val(), c(10, 20))
+    expect_equal(output$min, "10")
+  }) 
+})
+#> Test passed 🌈
+```
+
+Ok so here we use `session$flushReact()` because the outputs don't update the server outputs even though they do update the reactive `range_val` (try it wiht `session$flushReact` commented out and see what happens). This is allegedly because x is defined externally to the server. I wonder can I define it internally or will this not work as summaryServer requires it as an input?
+
+```{r}
+test_that("output updates when reactive input changes", {
+  
+  testServer(summaryServer, args = list(), {
+    x <- reactiveVal()
+    x(1:10)
+    browser()
+    session$flushReact()
+    expect_equal(range_val(), c(1, 10))
+    expect_equal(output$mean, "5.5")
+    
+    x(10:20)
+    session$flushReact()
+    expect_equal(range_val(), c(10, 20))
+    expect_equal(output$min, "10")
+  }) 
+})
+```
+
+No it fails because of the `stopifnot` functionality (duh!)!!!
+
+## Some more detail
+Okay so now I've kind of worked out how to test my server functions (this is the overstatement of the century):
+
+1. when I add inputs, are the appropriate reactions triggered?
+2. Don't test things that shiny should be testing
+3. I still don't know how to test ui changes based on reactive server variables
+
+But `clusteringServer` is still giving me grief. `clusteringServer` outputs a plotly graph which registers some event_data so that I can do other cool(?) things, but that `shiny::event_data` call gives a very annoying warning message if it is called before there is any data available in the graph. I have avoided this warning message when running the app itself by using things like `shiny::req()` before evaluating calls to `plotly::event_data` but for some reason, this warning still appears when I test the server and seems to mean that tests don't pass (this is just a warning rather than an error and I'm not using `expect_silent` so this too is a mystery).
+
+Ok let's ignore the above for a minute because I've lost my train of thought and look at testing uploading the reduced embeddings. 
+
+As an aside, I want to get to a point where I can just make a dummy df inside these testServers rather than uploading df and reduced_embeddings each time but for now I just want to get these test working and then I can start making them more efficient.
+
+```{r}
+testServer(
+  app = clusteringServer,
+  args = list(),
+  exp = {
+    
+    # inputs
+     session$setInputs(
+       data_upload = list(
+         name = "data/example_rds.rds",
+         datapath = "data/example_rds.rds"
+         ),
+       load_or_reduce_embeddings = "Load in reduced embeddings",
+       reduced_embeddings_upload = 
+         list(
+           name = "inst/testdata/reduced_embeddings.csv",
+           datapath = "inst/testdata/reduced_embeddings.csv"
+           )
+       )
+    
+    expect_true(inherits(reduced_embeddings(), "data.frame"))
+  }
+)
+```
+
+Ok that works, great! Does it work if I make a dummy df?
+
+```{r}
+testServer(
+  app = clusteringServer,
+  args = list(),
+  exp = {
+    
+    # inputs
+     session$setInputs(
+       load_or_reduce_embeddings = "Load in reduced embeddings",
+       reduced_embeddings_upload = 
+         list(
+           name = "inst/testdata/reduced_embeddings.csv",
+           datapath = "inst/testdata/reduced_embeddings.csv"
+           )
+       )
+    
+    expect_true(inherits(reduced_embeddings(), "data.frame"))
+  }
+)
+```
+
+Yes ok, because uploading embeddings doesn't require a df.
+
+But what about the more complicated task of calculating embeddings within the app. This is awkward because I require more than the `clusteringServer`, I also need the `reduceServer` and I need to be able to hit the `do_reducing_option1` action button.
+
+```{r}
+testServer(
+  app = clusteringServer,
+  args = list(id = "test"),
+  exp = {
+    ns <- session$ns
+    # inputs to the clusteringServer
+     session$setInputs(
+       data_upload = list(
+         name = "data/example_rds.rds",
+         datapath = "data/example_rds.rds"
+         ),
+       load_or_reduce_embeddings = "Calculate in app"
+       )
+    
+    # inputs to the reduceServer
+    session$setInputs(
+      `reduction_ui-n_neighbours1` = 10,
+      `reduction_ui-n_components1` = 5,
+      `reduction_ui-min_dist1` = 0.0,
+      `reduction_ui-reducing_metric1` = "cosine",
+      `reduction_ui-do_reducing_option1` = 1
+      
+    )
+    
+    browser()
+    # expect_true(inherits(reduced_embeddings(), "data.frame"))
+  }
+)
+```
+
+An example from the internet:
+
+```{r}
+outerModule <- function(id) {
+  moduleServer(id, function(input, output, session) {
+    r1 <- reactive({ input$x + 1})
+    r2 <- innerModule("inner", r1)
+    output$someVar <- renderText(r2())
+  })
+}
+
+innerModule <- function(id, r) {
+  moduleServer(id, function(input, output, session) {
+    reactive(paste("a value:", r()))
+  })
+}
+
+testServer(outerModule, args = list(id = "foo"), {
+  session$setInputs(x = 1)
+  expect_equal(output$someVar, "a value: 2")
+  browser()
+})
+```
+
+Since I can't make this work maybe I should start with testing the `reducingServer` in isolation.
+
+```{r}
+df <- reactive({
+    data.frame(docs = "this is a doc",
+               v1 = 0.1,
+               v2 = 0.3) %>%
+      dplyr::mutate(embeddings = matrix(runif(5), nrow = 1))
+}) 
+
+
+testServer(
+  app = reducingServer,
+  args = list(id = "test",
+              df = df),
+  exp = {
+    library(BertopicR)
+    # inputs to the reduceServer
+    session$setInputs(
+      n_neighbours1 = 10,
+      n_components1 = 5,
+      min_dist1 = 0.0,
+      reducing_metric1 = "cosine",
+      do_reducing_option1 = 1
+    )
+     Sys.sleep(10)
+     print(reduced_embeddings1$get_result())
+    # browser()
+    # expect_true(inherits(reduced_embeddings(), "data.frame"))
+  }
+)
+```
+
+Still not working - am I missing something obvious? Let's testing background_reduce:
+
+```{r}
+# df_upload <- readr::read_rds("data/example_rds.rds")
+df_test <- data.frame(docs = "this is a doc",
+               v1 = 0.1,
+               v2 = 0.3) %>%
+      dplyr::mutate(embeddings = matrix(runif(5), nrow = 1))
+testServer(
+  app = backgroundReduce,
+  args = list( 
+    id = "test",
+    n_neighbours = 10,
+    n_components = 5,
+    min_dist = 0.0,
+    metric = "cosine",
+    embeddings = df_test$embeddings,
+    wait_for_event = TRUE),
+  exp = {
+    
+    # wait_for_event means job is not triggered yet
+    expect_false(trigger_job())
+    
+    # not triggered yet
+    expect_error(inherits(bg_job(), "r_process"))
+    
+    trigger_job(TRUE) # mimics action button in reduceServer
+    expect_true(inherits(bg_job(), "r_process")) # job created
+    expect_true(bg_job()$is_alive()) # running
+    Sys.sleep(7) # wait for job to run
+    expect_false(bg_job()$is_alive()) # finished running
+    expect_true(is.array(bg_job()$get_result())) # outputs matrix
+    
+  }
+)
+
+```
+
+Ok so the `backgroundReduce` function does in fact work. The issue I'm having is testing parent server functions because triggering the action button that changes `trigger_job` to TRUE does not seem to be working as intended when triggered from a `testServer`.
+
+
+For the purpose of figuring out how to test this, I am going to return the `bg_job()$is_alive()` variable from the `backgroundReduce` function for now, I will remove it once I've figured this out, so if you're reading this later, this chunk should not work.
+```{r}
+df <- reactive({
+    data.frame(docs = "this is a doc",
+               v1 = 0.1,
+               v2 = 0.3) %>%
+      dplyr::mutate(embeddings = matrix(runif(5), nrow = 1))
+}) 
+
+
+testServer(
+  app = reducingServer,
+  args = list(id = "test",
+              df = df),
+  exp = {
+    # library(BertopicR)
+    # inputs to the reduceServer
+    session$setInputs(
+      n_neighbours1 = 10,
+      n_components1 = 5,
+      min_dist1 = 0.0,
+      reducing_metric1 = "cosine",
+      do_reducing_option1 = NULL,
+      `backgroundReduce-n_neighbours` = 10,
+      `backgroundReduce-n_components` = 5,
+      `backgroundReduce-min_dist` = 0.0,
+      `backgroundReduce-reducing_metric` = "cosine",
+      `backgroundReduce-embeddings` = df()$embeddings,
+      `backgroundReduce-wait_for_event` = TRUE,
+    )
+    
+    browser()
+    session$setInputs(do_reducing_option1 = 1)
+    session$elapse(millis = 10000)
+    # print(reduced_embeddings1$get_result())
+     # Sys.sleep(10)
+     # browser()
+     print(reduced_embeddings1$get_result())
+    # browser()
+    # expect_true(inherits(reduced_embeddings(), "data.frame"))
+  }
+)
+
+```
+
+It is not obvious from the above code but basically the above works if I run `session$setInputs(do_reducing_option1 = 1)` and `session$elapse(millis = 10000)` concurrently in the cosole (ie. if I highlight both and press enter or type both into the console and type enter) but it does not work if I run them one after the other. This indicates that there is some timing issue related to the `invalidateLater` function in `backgroundReduce`. The `invalidateLater` timing had previously been 250ms but which I upped to 2500ms to see if it solved the issue - it did not. I'm going to take
+
+```{r}
+df <- function(){
+    dummy_df <- data.frame(docs = "this is a doc",
+               # embeddings = embeddings,
+               v1 = 0.1,
+               v2 = 0.3)
+
+    return(list(df= dummy_df))
+}
+
+testServer(
+  app = clusteringServer,
+  args = list(),
+  exp = {
+    # ns <- session$ns
+    df <- reactiveVal()
+    df(data.frame(docs = "this is a doc",
+
+              v1 = 0.1,
+              v2 = 0.3) %>%
+       dplyr::mutate(embeddings = matrix(runif(5), nrow = 1)))
+    browser()
+    expect_true(is.data.frame(df()))
+    #
+
+    # session$setInputs(file_input = list(datapath = "data/example_rds.rds"))
+    # expect_true(!is.null(input$file_input))
+    # expect_true(is.data.frame(file()))
+  }
+)
+
+test_that("Calculate in app option calculates reduced embeddings", {
+  testServer(
+    app = clusteringServer,
+    args = list(),
+    exp = {
+      session$setInputs(data_upload =
+                          list(
+                            name = "data/example_rds.rds",
+                            datapath = "data/example_rds.rds"),
+                            load_or_reduce_embeddings = "Calculate in app")
+      session$setInputs(`reduction_ui-df` = df,)
+      browser()
+      # expect_true(!is.null(reduced_embeddings()))
+    }
+  )
+})
+```
+
+
