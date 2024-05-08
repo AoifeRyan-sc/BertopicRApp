@@ -1,29 +1,70 @@
-test_that("Test reducingUi works as expected", {
-  ui <- reducingUi(id = "test")
+test_that("backgroundReduce function reduces embeddings", {
+
+  embeddings <- matrix(runif(5), nrow = 1)
   
-  # browser()
-  expect_true("shiny.tag.list" %in% class(ui))
+  df <- reactive({
+    data.frame(docs = "this is a doc",
+               v1 = 0.1,
+               v2 = 0.3) %>%
+      dplyr::mutate(embeddings,
+                    rowid = dplyr::row_number())
+  })
   
-  # checking html 
-  ui_char <- as.character(ui)
-  expect_equal(stringr::str_count(ui_char, "div"), 32)
-  expect_equal(stringr::str_count(ui_char, "input-select"), 2)
-  expect_equal(stringr::str_count(ui_char, "shiny-panel-conditional"), 2)
-  expect_equal(stringr::str_count(ui_char, "action-button"), 1)
-  expect_equal(stringr::str_count(ui_char, "type=\"number\""), 4)
+  testServer(
+    app = backgroundReduce,
+    args = list( 
+      id = "test",
+      n_neighbours = 10,
+      n_components = 5,
+      min_dist = 0.0,
+      metric = "cosine",
+      embeddings = embeddings,
+      wait_for_event = TRUE),
+    exp = {
+      
+      # wait_for_event means job is not triggered yet
+      expect_false(trigger_job())
+      expect_null(session$returned$get_result())
+      expect_true(inherits(session$returned$start_job, "function"))
+      
+      # check returned values
+      expect_true(is.list(session$returned))
+      
+      # not triggered yet
+      expect_error(inherits(bg_job(), "r_process"))
+      
+      trigger_job(TRUE) # mimics action button in reduceServer
+      expect_true(inherits(bg_job(), "r_process")) # job created
+      expect_true(bg_job()$is_alive()) # running
+      Sys.sleep(7) # wait for job to run
+      expect_false(bg_job()$is_alive()) # finished running
+      expect_true(is.array(bg_job()$get_result())) # outputs matrix
   
-  # If I build out the PCA options I should probably update this - or is this test pedantic?
+      # check array returned
+      session$flushReact() # Manually trigger evaluation of reactives
+      expect_true(is.array(session$returned$get_result())) #
+      
+    }
+  )
 })
 
 test_that("ReducingServer calculates reduced emeddings and returns them", {
-  # this is a working progress in working_docs/shiny-testing.Rmd but I am struggling
+  
+  embeddings <- matrix(runif(5), nrow = 1)
+  
+  df <- reactive({
+    data.frame(docs = "this is a doc",
+               v1 = 0.1,
+               v2 = 0.3) %>%
+      dplyr::mutate(embeddings,
+                    rowid = dplyr::row_number())
+  })
+  
   testServer(
     app = reducingServer,
     args = list(id = "test",
                 df = df),
     exp = {
-      # library(BertopicR)
-      # inputs to the reduceServer
       session$setInputs(
         n_neighbours1 = 10,
         n_components1 = 5,
@@ -33,20 +74,20 @@ test_that("ReducingServer calculates reduced emeddings and returns them", {
         `backgroundReduce-n_neighbours` = 10,
         `backgroundReduce-n_components` = 5,
         `backgroundReduce-min_dist` = 0.0,
-        `backgroundReduce-reducing_metric` = "cosine",
-        `backgroundReduce-embeddings` = df()$embeddings,
+        `backgroundReduce-metric` = "cosine",
+        `backgroundReduce-embeddings` = embeddings,
         `backgroundReduce-wait_for_event` = TRUE,
       )
+
+      expect_null(reduced_embeddings1$get_result()) # no output before action button pressed
       
-      browser()
-      session$setInputs(do_reducing_option1 = 1)
-      session$elapse(millis = 10000)
-      # print(reduced_embeddings1$get_result())
-      # Sys.sleep(10)
-      # browser()
-      print(reduced_embeddings1$get_result())
-      # browser()
-      # expect_true(inherits(reduced_embeddings(), "data.frame"))
+      session$setInputs(do_reducing_option1 = 1) # mimics action button
+      
+      Sys.sleep(5) # give time for operation to complete
+      session$elapse(millis = 250) # allow session to fastforward past invalidateLater(250) function
+     
+      expect_true(is.array(reduced_embeddings1$get_result()))
+      expect_true(is.array(session$returned()))
     }
   )
 })

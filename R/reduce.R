@@ -9,7 +9,8 @@ reducingUi <- function(id){
   ns <- shiny::NS(id)
   
   shiny::tagList(
-      shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
+      shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP")),
+                                                                               # "PCA")),
       shiny::conditionalPanel(
         condition = "input.reducing_method == 'UMAP'", ns = ns,
         shiny::div(

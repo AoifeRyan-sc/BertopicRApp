@@ -137,7 +137,7 @@ outlierServer <- function(id, df, model, clusters, embedder){
     )
     
     output$download_note <- shiny::renderText({
-      "<em>Note that when retrieving a Bertopic model in your rstudio later, you must access the filepath relative to your wd, you cannot retrieve it relative to the home directory using a '~'.</em>"
+      "<i>Note that when retrieving a Bertopic model in your rstudio later, you must access the filepath relative to your wd, you cannot retrieve it relative to the home directory using a '~'.</i>"
     })
     
 

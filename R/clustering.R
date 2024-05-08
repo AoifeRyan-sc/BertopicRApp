@@ -34,7 +34,7 @@ shiny::tagList(
           shiny::conditionalPanel(
             condition = "input.load_or_reduce_embeddings == 'Load in reduced embeddings'", ns = ns,
             shiny::fileInput(ns("reduced_embeddings_upload"), "Upload Reduced Embeddings",
-                             accept = c(".xlsx", ".csv", ".tsv", ".rds", ".rda"), multiple = FALSE)
+                             accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE)
           ),
           shiny::conditionalPanel(
           condition = "input.load_or_reduce_embeddings == 'Calculate in app'", ns = ns,
@@ -121,7 +121,7 @@ clusteringServer <- function(id){
             )
     })
     
-    reduced_embeddings <- reactive({
+    reduced_embeddings <- shiny::reactive({
       if (input$load_or_reduce_embeddings == "Calculate in app"){
         reduced_embeddings_calculated()
       } else {

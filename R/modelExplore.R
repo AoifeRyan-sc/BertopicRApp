@@ -23,7 +23,8 @@ modelExploreUi <- function(id){
         shiny::tabPanel(
           "UMAP",
           shiny::br(),
-          plotly::plotlyOutput(ns("model_explore_umap")),
+          # plotly::plotlyOutput(ns("model_explore_umap")),
+          shiny::uiOutput(ns("model_explore_umap_display")),
           value = 2
         ),
         shiny::tabPanel(
@@ -35,7 +36,8 @@ modelExploreUi <- function(id){
         shiny::tabPanel(
           "Representation",
           shiny::br(),
-          shiny::plotOutput(ns("representation")),
+          # shiny::plotOutput(ns("representation")),
+          shiny::uiOutput(ns("representation_display")),
           value = 4
         ),
         id = ns("model_explore_panels")
@@ -111,6 +113,22 @@ modelExploreServer <- function(id, model = model, df = df){
         DT::datatable(selection = "single")
     })
     
+    output$model_explore_umap_display <- shiny::renderUI({
+      if(!is.null(model())){
+        shiny::tagList(
+          shiny::br(),
+          plotly::plotlyOutput(ns("model_explore_umap"))
+        )
+        
+      } else {
+        shiny::tagList(
+          shiny::h4("Warning: No model has been generated."),
+          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        )
+      }
+    }) # conditional display 
+    
+    
     output$model_explore_umap <- plotly::renderPlotly({
       colour_var <- shiny::reactive({df_explore_model()$topic})
       createUmap("model_explore_umap", df = df_explore_model, colour_var = colour_var,
@@ -148,6 +166,23 @@ modelExploreServer <- function(id, model = model, df = df){
                                text_var = Document,
                                filter_by = "association")
     })
+    
+    output$representation_display <- shiny::renderUI({
+      if(!is.null(model())){
+        shiny::tagList(
+          # shiny::br(),
+          # plotly::plotOutput(ns("representaion"))
+          shiny::br()
+        )
+        
+      } else {
+        shiny::tagList(
+          shiny::h4("Warning: No model has been generated."),
+          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+        )
+      }
+    }) # conditional display 
+    
 
   })
 }
