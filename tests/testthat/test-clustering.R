@@ -39,10 +39,11 @@ test_that("Test clusteringUi works as expected", {
   
 })
 
-test_that("clusteringServer takes correctly formatted df, doesn't accept incorrectly formatted df and displays the appropriate output", {
+test_that("clusteringServer takes correctly formatted df, 
+          doesn't accept incorrectly formatted df and displays the appropriate output", {
   testServer(
     app = clusteringServer,
-    args = list(),
+    args = list(id = "test"),
     exp = {
       ns <- session$ns
       
@@ -67,86 +68,159 @@ test_that("clusteringServer takes correctly formatted df, doesn't accept incorre
   )
 })
 
-# These tests about reduced_embeddings are not working rn -----
-# test_that("clusteringServer takes uploaded embeddings when specified", {
-#   testServer(
-#     app = clusteringServer,
-#     args = list(id = "test"),
-#     exp = {
-#       session$setInputs(data_upload = 
-#                           list(
-#                             name = "testdata/example_rds.rds",
-#                             datapath = "testdata/example_rds.rds"))
-#       session$setInputs(load_or_reduce_embeddings = "Load in reduced embeddings")
-#       expect_error(reduced_embeddings()) # no data uploaded yet
-# 
-#       session$setInputs(
-#         reduced_embeddings_upload = list(
-#           name = "testdata/reduced_embeddings.csv",
-#           datapath = "testdata/reduced_embeddings.csv")) # upload data
-# 
-#       expect_true(inherits(reduced_embeddings(), "tbl")) # reduced_embeddings is a tbl
-#     }
-#   )
-# })
+test_that("clusteringServer takes uploaded embeddings when specified", {
+  testServer(
+    app = clusteringServer,
+    args = list(id = "test"),
+    exp = {
+      session$setInputs(data_upload =
+                          list(
+                            name = "testdata/example_rds.rds",
+                            datapath = "testdata/example_rds.rds"))
+      session$setInputs(load_or_reduce_embeddings = "Load in reduced embeddings")
+      expect_error(reduced_embeddings()) # no data uploaded yet
+
+      session$setInputs(
+        reduced_embeddings_upload = list(
+          name = "testdata/reduced_embeddings.csv",
+          datapath = "testdata/reduced_embeddings.csv")) # upload data
+
+      expect_true(inherits(reduced_embeddings(), "tbl")) # reduced_embeddings is a tbl
+    }
+  )
+})
 
 
-# test_that("clusteringServer correctly obtains reduced embeddings from child servers", {
-#   embeddings <- matrix(runif(5), nrow = 1)
-#   
-#   df <- reactive({
-#     data.frame(docs = "this is a doc",
-#                v1 = 0.1,
-#                v2 = 0.3) %>%
-#       dplyr::mutate(embeddings,
-#                     rowid = dplyr::row_number())
-#   })
-#   
-#   testServer(
-#     app = clusteringServer,
-#     args = list(
-#       id = "test"
-#     ),
-#     exp = {
-#       session$setInputs(
-#         load_or_reduce_embeddings = "Calculate in app",
-#         `reducingServer-n_neighbours1` = 10,
-#         `reducingServer-n_components1` = 5,
-#         `reducingServer-min_dist1` = 0.0,
-#         `reducingServer-reducing_metric1` = "cosine",
-#         `reducingServer-do_reducing_option1` = NULL,
-#         `reducingServer-backgroundReduce-n_neighbours` = 10,
-#         `reducingServer-backgroundReduce-n_components` = 5,
-#         `reducingServer-backgroundReduce-min_dist` = 0.0,
-#         `reducingServer-backgroundReduce-metric` = "cosine",
-#         `reducingServer-backgroundReduce-embeddings` = embeddings,
-#         `reducingServer-backgroundReduce-wait_for_event` = TRUE,
-#       )
-#       
-#       browser()
-#       expect_null(reduced_embeddings_calculated())
-# 
-#       df <- reactive({
-#         data.frame(docs = "this is a doc",
-#                    v1 = 0.1,
-#                    v2 = 0.3) %>%
-#           dplyr::mutate(embeddings,
-#                         rowid = dplyr::row_number())
-#       })
-#       
-#       # df()
-#       session$setInputs(`reducingServer-do_reducing_option1` = 1) # mimics action button
-#       reduced_embeddings_calculated()
-# 
-#       Sys.sleep(5) # give time for operation to complete
-#       session$elapse(millis = 250) # allow session to fastforward past invalidateLater(250) function
-# 
-#       expect_true(is.array(reduced_embeddings1$get_result()))
-#       expect_true(is.array(session$returned()))
-#     }
-#   )
-# })
+test_that("clusteringServer correctly obtains reduced embeddings from child servers", {
+  embeddings <- matrix(runif(5), nrow = 1)
+  # embeddings <- matrix(runif(5), nrow = 394)
 
+  testServer(
+    app = clusteringServer,
+    args = list(
+      id = "test"
+    ),
+    exp = {
+      session$setInputs(
+        data_upload =
+          list(
+            name = "testdata/example_rds.rds",
+            datapath = "testdata/example_rds.rds"
+          ),
+        load_or_reduce_embeddings = "Calculate in app",
+        `reduction_ui-n_neighbours1` = 10,
+        `reduction_ui-n_components1` = 5,
+        `reduction_ui-min_dist1` = 0.0,
+        `reduction_ui-reducing_metric1` = "cosine",
+        `reduction_ui-do_reducing_option1` = NULL,
+        `reduction_ui-backgroundReduce-n_neighbours` = 10,
+        `reduction_ui-backgroundReduce-n_components` = 5,
+        `reduction_ui-backgroundReduce-min_dist` = 0.0,
+        `reduction_ui-backgroundReduce-metric` = "cosine",
+        `reduction_ui-backgroundReduce-embeddings` = embeddings,
+        `reduction_ui-backgroundReduce-wait_for_event` = TRUE,
+      )
+      
+      # df <- reactive({
+      #   data.frame(docs = "this is a doc",
+      #              v1 = 0.1,
+      #              v2 = 0.3) %>%
+      #     dplyr::mutate(embeddings,
+      #                   rowid = dplyr::row_number())
+      # })
+      # 
+      # session$flushReact()
 
+      # browser()
+      session$setInputs(`reduction_ui-do_reducing_option1` = 1) # mimics action button
+      Sys.sleep(15)
+      session$elapse(millis = 500)
+      expect_true(is.array(reduced_embeddings_calculated()))
+      expect_true(is.array(reduced_embeddings()))
+    }
+  )
+})
 
-test_that("mdoel")
+test_that("The child module modellingServer outputs fitted model and other params", {
+  testServer(
+    app = clusteringServer,
+    args = list(id = "test"),
+    exp = {
+      session$setInputs(
+        data_upload =
+          list(
+            name = "testdata/example_rds.rds",
+            datapath = "testdata/example_rds.rds"
+            ),  
+        load_or_reduce_embeddings = "Load in reduced embeddings",
+        reduced_embeddings_upload = 
+          list(
+            name = "testdata/reduced_embeddings.csv",
+            datapath = "testdata/reduced_embeddings.csv"
+            ),
+        `modelling_selection-cluster_method` = "HDBSCAN",
+        `modelling_selection-min_cluster_size` = 2,
+        `modelling_selection-min_sample_size` = 5,
+        `modelling_selection-hdbscan_cluster_selection` = "eom",
+        `modelling_selection-hdbscan_metric` = "euclidean"
+      )
+      
+      expect_equal(length(modelling_outputs$clusters()), nrow(df())) # outputs clusters
+      expect_true(is.character(modelling_outputs$cluster_model())) # outputs cluster model
+      expect_null(modelling_outputs$model()) # action button not yet clicked
+       
+      session$setInputs(`modelling_selection-do_modelling` = 1) # mimic action button
+  
+      expect_true(inherits(modelling_outputs$model(), "bertopic._bertopic.BERTopic")) # outputs Bertopic model
+      expect_true(is.numeric(modelling_outputs$model()$topics_)) # outputs fitted Bertopic model
+    
+    }
+  )
+})
+
+test_that("clusteringServer generates umap when modelling and reducing params provided", {
+  # embeddings <- matrix(runif(5), nrow = 1)
+  embeddings <- matrix(runif(5), nrow = 394)
+  
+  testServer(
+    app = clusteringServer,
+    args = list(
+      id = "test"
+    ),
+    exp = {
+      session$setInputs(load_or_reduce_embeddings = "Load in reduced embeddings",
+                        data_upload =
+                          list(
+                            name = "testdata/example_rds.rds",
+                            datapath = "testdata/example_rds.rds"
+                            ),
+                        reduced_embeddings_upload = 
+                          list(
+                            name = "testdata/reduced_embeddings.csv",
+                            datapath = "testdata/reduced_embeddings.csv"
+                            ),
+                        `modelling_selection-cluster_method` = "HDBSCAN",
+                        `modelling_selection-min_cluster_size` = 2,
+                        `modelling_selection-min_sample_size` = 5,
+                        `modelling_selection-hdbscan_cluster_selection` = "eom",
+                        `modelling_selection-hdbscan_metric` = "euclidean",
+                        `modelling_selection-do_modelling` = 1
+                        ) # upload data
+      # browser()
+      # expect_true(inherits(output$cluster_plot, "json"))
+      if(requireNamespace("jsonlite")){ # check the plotly select capabilities
+        plotly_data <- jsonlite::fromJSON(output$cluster_plot[[1]])
+        
+        expect_contains(
+          names(plotly_data$deps), c("name", "version", "src", "script", "stylesheet")
+        )
+        
+        expect_contains(
+          plotly_data$x$shinyEvents, c("plotly_hover", "plotly_selected", "plotly_click")
+        )
+        
+        expect_equal(length(unlist(plotly_data$x$data$x)), nrow(df())) # plotting correct data
+      }
+    }
+  )
+})

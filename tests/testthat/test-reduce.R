@@ -83,8 +83,8 @@ test_that("ReducingServer calculates reduced emeddings and returns them", {
       
       session$setInputs(do_reducing_option1 = 1) # mimics action button
       
-      Sys.sleep(5) # give time for operation to complete
-      session$elapse(millis = 250) # allow session to fastforward past invalidateLater(250) function
+      Sys.sleep(7) # give time for operation to complete
+      session$elapse(millis = 500) # allow session to fastforward past invalidateLater(250) function
      
       expect_true(is.array(reduced_embeddings1$get_result()))
       expect_true(is.array(session$returned()))
