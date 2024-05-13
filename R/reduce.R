@@ -9,7 +9,7 @@ reducingUi <- function(id){
   ns <- shiny::NS(id)
   
   shiny::tagList(
-      shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP")),
+      shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
                                                                                # "PCA")),
       shiny::conditionalPanel(
         condition = "input.reducing_method == 'UMAP'", ns = ns,
@@ -36,15 +36,14 @@ reducingUi <- function(id){
             shiny::selectInput(ns("reducing_metric1"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
           )
         ),
+        shiny::verbatimTextOutput(ns("print_status")),
         shiny::actionButton(ns("do_reducing_option1"), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
                             width = "100%", style = "margin-bottom: 30px; border-width: 2px;")
       ),
       shiny::conditionalPanel(
-        condition = "input.cluster_method == 'PCA'", ns = ns,
-        shiny::numericInput(ns("this_is_a_test"), "This is a test", value = 0)
-      # )
-      ),
-      shiny::verbatimTextOutput(ns("print_status"))
+        condition = "input.reducing_method == 'PCA'", ns = ns,
+        "This functionality is not yet implemented in the app."
+      )
     )
 }
 
@@ -78,10 +77,36 @@ reducingUi <- function(id){
       print("starting job")
     }) 
     
-    output$print_status <- shiny::renderPrint({
-      reduced_embeddings1$get_result()
-      # session$ns
+    flag <- rectiveValues(epoch_completed = FALSE)
+    
+    output$print_status <- shiny::renderText({
+      # message <- ""
+      # print(reduced_embeddings1$progress())
+      if (stringr::str_detect(progress, "Epochs completed")) {
+        message <- paste(message, reduced_embeddings1$progress(), collapse = "\n")
+        flag$epoch_completed <- TRUE
+      }
+      
+      
+      if (stringr::str_detect(reduced_embeddings1$progress(),"Reducing in progress")){
+        message <- reduced_embeddings1$progress() 
+        print("message is space and reducing in progress")
+        message
+      } else if (stringr::str_detect(reduced_embeddings1$progress(), "Epochs completed")){
+        
+        print("epochs")
+        message
+        # print_message <- message
+      } else {
+        print("other")
+        message
+      }
+  
     })
+    
+    # output$pca_unavailable_message <- shiny::HTML(p(
+    #   "This functionality is not yet implemented in the app."
+    #   ))
     return(
       # list(
       shiny::reactive(reduced_embeddings1$get_result())

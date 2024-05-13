@@ -86,7 +86,7 @@ clusteringServer <- function(id){
                    rds = readRDS(input$data_upload$datapath),
                    shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
       ) %>%
-        dplyr::mutate(rowid = dplyr::row_number())
+        dplyr::mutate(rowid = dplyr::row_number(), .before = 1)
 
     })
     
@@ -121,13 +121,25 @@ clusteringServer <- function(id){
             )
     })
     
-    reduced_embeddings <- shiny::reactive({
-      if (input$load_or_reduce_embeddings == "Calculate in app"){
-        reduced_embeddings_calculated()
-      } else {
-        reduced_embeddings_loaded()
-      }
+    r <- shiny::reactiveValues(reduced_embeddings = NULL)
+    
+    observe({
+      r$reduced_embeddings <- 
+        if (input$load_or_reduce_embeddings == "Calculate in app"){
+          reduced_embeddings_calculated()
+        } else {
+          reduced_embeddings_loaded()
+        }
     })
+    
+    shiny::observeEvent(input$data_upload, {
+      shinyjs::reset("reduced_embeddings_upload")
+      r$reduced_embeddings <- NULL 
+    })
+    
+    reduced_embeddings <- shiny::reactive({
+      r$reduced_embeddings
+    }) # this is a lazy way of dealing with the fact that I added r as a container so that I don't have to change subsequent code
 
     modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
     
@@ -156,7 +168,8 @@ clusteringServer <- function(id){
     
     
     display_data <- shiny::reactive({
-      shiny::req(reduced_embeddings()) # delaying this to avoid error message
+      # shiny::req(reduced_embeddings()) # delaying this to avoid error message
+      shiny::req(is.array(reduced_embeddings()) | is.data.frame(reduced_embeddings()))
       selected <- plotly::event_data(event = "plotly_selected", source = "umap_clustering")
       df_temp <- df() %>% dplyr::select(-c(embeddings, v1, v2))
       df_temp[df_temp$rowid %in% selected$customdata, ] %>%

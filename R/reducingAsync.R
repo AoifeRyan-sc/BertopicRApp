@@ -26,22 +26,73 @@ backgroundReduce <- function(id,
     shiny::observe({
       shiny::req(isTRUE(trigger_job()))
       shiny::invalidateLater(250)
-      message(sprintf("checking: %s", id))
+      # message(sprintf("checking: %s", id))
+      error <- bg_job()$read_error()
+      if (stringr::str_detect(error, "Epochs completed")){
+        progress_regex <- "Epochs completed:(.*?)\\]"
+        progress_message <- paste(stringr::str_extract_all(error, progress_regex)[[1]], collapse = "\n")
+        message(progress_message)
+      } else { 
+        progress_message <- "Reducing in progress"
+        message(progress_message)
+        }
       
       alive <- bg_job()$is_alive()
       if (isFALSE(alive)) {
         job_result(bg_job()$get_result())
-        message(sprintf("done: %s", id))
+        # message(sprintf("done: %s", id))
         trigger_job(FALSE)
       }
+    })
+    
+    progress <- shiny::reactive({
+      # shiny::req(isTRUE(trigger_job()))
+      # message <- ""
+      # if(trigger_job()){
+      #   # message(message)
+        shiny::invalidateLater(250)
+      #   error <- bg_job()$read_error()
+      # 
+      #   if (stringr::str_detect(error, "Epochs completed")){
+      #     progress_regex <- "Epochs completed:(.*?)\\]"
+      #     # initial_message <- paste(stringr::str_extract_all(error, progress_regex), sep = "\n")
+      #     # message <- paste(message, paste(stringr::str_extract_all(error, progress_regex), sep = "\n"), sep = "\n")
+      #     message <- paste(message, paste(stringr::str_extract_all(error, progress_regex)[[1]], collapse = "\n"), collapse = "\n")
+      #     message
+      #   } 
+      #   if (message == "") { 
+      #     "Reducing in progress"
+      #   } 
+      #   
+      # } else {
+      #   # if (message == "") {
+      #   #   "Use the 'Reduce Button' to begin reducing embeddings."
+      #   # } else {
+      #   #   message
+      #   # }
+      #   "Not sure what to print here"
+      # }
+      # 
+      error <- bg_job()$read_error()
+      if (stringr::str_detect(error, "Epochs completed")){
+        progress_regex <- "Epochs completed:(.*?)\\]"
+        progress_message <- paste(stringr::str_extract_all(error, progress_regex)[[1]], collapse = "\n")
+        # message(progress_message)
+        progress_message
+      } else {
+        progress_message <- "Reducing in progress"
+        # message(progress_message)
+        progress_message
+      }
+      
     })
     
     return(list(
       start_job = function() trigger_job(TRUE),
       get_result = shiny::reactive(job_result()),
-      is_alive = shiny::reactive(bg_job()$is_alive())
+      is_alive = shiny::reactive(bg_job()$is_alive()),
+      progress_message = progress
     ))
     
   })
 }
-

@@ -89,7 +89,7 @@ modelExploreServer <- function(id, model = model, df = df){
     df_explore_model <- shiny::reactive({
       df() %>%
       dplyr::mutate(topic = model()$topics_) %>%
-      dplyr::filter(topic == selected_cluster()) 
+      dplyr::filter(topic %in% as.list(selected_cluster()))
     })
     
     output$doc_breakdown_display <- shiny::renderUI({
