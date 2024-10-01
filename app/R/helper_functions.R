@@ -151,22 +151,22 @@ calculate_wlos_app <- function(df, topic_var, text_var = Message, top_n = 30, fi
 #' @noRd
 #' 
 createUmap <- function(source_id, df = df, colour_var, title){
+
   
-  if (-1 %in% colour_var()){
-    colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var())) - 1))
+  if (-1 %in% colour_var){
+    colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var)) - 1))
   } else{
-    colour_pal <- pals::stepped2(length(unique(colour_var())))
+    colour_pal <- pals::stepped2(length(unique(colour_var)))
   }
   
-  
-  df() %>% dplyr::mutate(topics = as.factor(colour_var())) %>%
+  df %>% dplyr::mutate(topics = as.factor(colour_var)) %>%
     plotly::plot_ly(x = ~v1,
                     y = ~v2,
                     color = ~topics,
                     customdata = ~rowid,
-                    type = "scatter", 
+                    type = "scatter",
                     mode = "markers",
-                    text = ~docs, 
+                    text = ~docs,
                     hoverinfo = "text",
                     colors = colour_pal,
                     marker = list(opacity = 0.7),  # Adjust marker size and opacity
@@ -192,7 +192,7 @@ createUmap <- function(source_id, df = df, colour_var, title){
         annotation = TRUE
       )
     )
-  
+
   
   
 }

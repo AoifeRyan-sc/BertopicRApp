@@ -4,7 +4,7 @@
 #'
 #' @noRd
 #' 
-reducingUi <- function(id){
+reducingCalcUi <- function(id){
   
   ns <- shiny::NS(id)
   
@@ -55,7 +55,7 @@ reducingUi <- function(id){
 #'
 #' @noRd
 #'
-  reducingServer <- function(id, df){
+  reducingCalcServer <- function(id, df){
   shiny::moduleServer(id, function(input, output, session){
     
     # ns <- session$ns
