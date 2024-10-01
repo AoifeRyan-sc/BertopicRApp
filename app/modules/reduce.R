@@ -77,7 +77,7 @@ reducingUi <- function(id){
       print("starting job")
     }) 
     
-    flag <- rectiveValues(epoch_completed = FALSE)
+    flag <- shiny::reactiveValues(epoch_completed = FALSE)
     
     output$print_status <- shiny::renderText({
       # message <- ""

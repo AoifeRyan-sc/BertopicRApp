@@ -24,6 +24,8 @@ source(here("app/modules/modelExplore.R"))
 source(here("app/modules/clustering.R"))
 source(here("app/modules/outlier.R"))
 
+source(here("app/modules/clustering_elements.R"))
+
 # source(here("app/modules/clustering_panel_elements.R"))
 
 # Source App Files

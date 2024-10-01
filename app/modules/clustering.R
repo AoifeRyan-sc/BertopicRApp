@@ -13,8 +13,9 @@ shiny::tagList(
   shiny::sidebarLayout(
     shiny::sidebarPanel(
       shiny::tabsetPanel(
-        id = ns("data_prep_panel"),
+        id = ns("data_prep_panel"), 
         shiny::tabPanel(
+          # clustering_upload_ui(ns("clustering_upload_ui"))
           "Upload Data",
           shiny::br(),
           shiny::fileInput(
@@ -23,7 +24,7 @@ shiny::tagList(
           shiny::uiOutput(ns("data_upload_error_message")),
           shiny::verbatimTextOutput(ns("reduced_embeddings_sample")),
           value = "upload"
-          ),
+        ),
         shiny::tabPanel(
           "Reduce Embeddings",
           shiny::br(),
