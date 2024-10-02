@@ -149,7 +149,7 @@ clusteringMainPanelServer <- function(id, r){
 
   output$cluster_plot <- plotly::renderPlotly({
     shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
-    createUmap("umap_clustering", df = r$df, colour_var = r$clusters,
+    createUmap("umap_clustering", df = r$df, colour_var = r$clusters(),
                title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
     
   })

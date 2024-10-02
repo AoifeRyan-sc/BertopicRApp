@@ -53,40 +53,71 @@ modellingServer <- function(id, r){ # do I need df?
     select_method <- shiny::reactive(input$hdbscan_cluster_selection)
     hdb_metric <- shiny::reactive(input$hdbscan_metric)
     
-    clusterer <- shiny::reactive({
-      # shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
-      clusterer <- if (input$cluster_method == "HDBSCAN") {
-        BertopicR::bt_make_clusterer_hdbscan(
-          min_cluster_size = min_cluster(),
-          min_samples = min_samples(),
-          cluster_selection_method = select_method(),
-          metric = hdb_metric()
-        )
-      } else if (input$cluster_method == "K-Means") {
-          BertopicR::bt_make_clusterer_kmeans(
-            n_clusters = num_clusters()
-          )
-        } else {
-          stop("Invalid clustering method selected")
-        }
-      print(r$reduced_embeddings[1:10])
-      print(clusterer)
-      
-      clusterer
-      })
+    # shiny::observe({
+    #   shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+    #   print("clustering")
+    #   print(r$reduced_embeddings)
+    #   if (input$cluster_method == "HDBSCAN"){
+    #     clusterer = BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
+    #   } else if (input$cluster_method == "K-Means"){
+    #     clusterer = BertopicR::bt_make_clusterer_kmeans(n_clusters = num_clusters())
+    #   }
+    #   print(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+    #   print(clusterer)
+    #   r$clusters <- BertopicR::bt_do_clustering(clusterer, r$reduced_embeddings)
+    # })
     
+    # 
+        clusterer <- shiny::reactive({
+          if (input$cluster_method == "HDBSCAN"){
+            BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
+          } else if (input$cluster_method == "K-Means"){
+            BertopicR::bt_make_clusterer_kmeans(n_clusters = num_clusters())
+          }
+        })
+
+        r$clusters <- shiny::reactive({
+          print(clusterer())
+          req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+          browser()
+          BertopicR::bt_do_clustering(clusterer(), r$reduced_embeddings)
+          })
+    #
+    
+    # clusterer <- shiny::reactive({
+    #   # shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+    #   clusterer <- if (input$cluster_method == "HDBSCAN") {
+    #     BertopicR::bt_make_clusterer_hdbscan(
+    #       min_cluster_size = min_cluster(),
+    #       min_samples = min_samples(),
+    #       cluster_selection_method = select_method(),
+    #       metric = hdb_metric()
+    #     )
+    #   } else if (input$cluster_method == "K-Means") {
+    #       BertopicR::bt_make_clusterer_kmeans(
+    #         n_clusters = num_clusters()
+    #       )
+    #     } else {
+    #       stop("Invalid clustering method selected")
+    #     }
+    #   print(r$reduced_embeddings[1:10])
+    #   print(clusterer)
+    #   
+    #   clusterer
+    #   })
+    # 
     # test <- shiny::eventReactive(clusterer(), {
     #   shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
     #   print(clusterer())
     #   message("work?")
     # })
-    
-    shiny::reactive({
-      shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
-      print("clustering")
-      # tryCatch({
-
-        r$clusters <- BertopicR::bt_do_clustering(clusterer(), r$reduced_embeddings)
+    # 
+    # shiny::reactive({
+    #   shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+    #   print("clustering")
+    #   # tryCatch({
+    # 
+    #     r$clusters <- BertopicR::bt_do_clustering(clusterer(), r$reduced_embeddings)
 
     #     message("Clustering completed successfully")
     # 
@@ -95,7 +126,7 @@ modellingServer <- function(id, r){ # do I need df?
     #     message("Clustering failed: ", e$message)
     #     shiny::showNotification(paste("Clustering failed:", e$message), type = "error")
     # })
-    })
+    # })
     
     clusterer <- shiny::reactive({
       if (input$cluster_method == "HDBSCAN"){
