@@ -16,7 +16,7 @@ options(shiny.host = "127.0.0.1")
 source(here("app/R/helper_functions.R"))
 source(here("app/R/reducingAsync.R"))
 
-# source(here("app/www/x_logo.png"))
+# source(here("app/www/styles.css"))
 
 source(here("app/modules/reduce.R"))
 source(here("app/modules/modelling.R"))

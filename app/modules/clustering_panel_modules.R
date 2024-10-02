@@ -30,6 +30,7 @@ clusteringUploadServer <- function(id, r){
     })
     
     output$data_upload_error_message <- shiny::renderUI({
+      req(input$data_upload)
       
       required_cols <- c("docs", "embeddings", "v1", "v2")  # Add your required column names here
       missing_cols <- setdiff(required_cols, colnames(r$df))
@@ -75,7 +76,7 @@ clusteringReduceServer <- function(id, r){
     
     ns <- session$ns
     
-    reduced_embeddings_calculated <- reducingCalcServer("reduction_ui", df = df)
+    reduced_embeddings_calculated <- reducingCalcServer("reduction_ui", r)
     reduced_embeddings_loaded <- shiny::reactive({
       shiny::req(input$reduced_embeddings_upload)
       
@@ -110,23 +111,7 @@ clusteringMainPanelUi <- function(id){
   ns <- NS(id)
   
   shiny::tagList(
-    # print(ns("data_prep_panel")),
-    shiny::uiOutput(ns("test_output")),
-    # shiny::conditionalPanel(
-    #   # print(sprintf("input['%s'] === 'upload'", ns("data_prep_panel"))),
-    #   # condition = sprintf("input['%s'] == 'upload'", ns("data_prep_panel")),
-    #   # condition = paste0("input['", ns("data_prep_panel"), "'] == 'upload'"),
-    #   condition = "input['clustering_panel-clustering_main_panel-data_prep_panel'] == 'upload'",
-    #   # condition = "input.data_prep_panel == 'upload'", ns = ns("data_prep_panel"),
-    #   DT::dataTableOutput(ns("uploaded_data")),
-    # ),
-    # shiny::conditionalPanel(
-    #   condition = paste0("input['", ns("data_prep_panel"), "'] == 'cluster'"),
-    #   # condition = sprintf("input['%s'] != 'upload'", ns("data_prep_panel")),
-    #   # condition = "input.data_prep_panel != 'upload'", ns = ns("data_prep_panel"),
-    #   shiny::uiOutput(ns("cluster_plot_display"))
-    # ),
-    # shiny::uiOutput(ns("cluster_plot_display")),
+    shiny::uiOutput(ns("data_display")),
     DT::dataTableOutput(ns("selected_data_df")),
     shiny::downloadButton(ns("data_download_clustering"), label = "Download Data Table")
   )
@@ -136,7 +121,7 @@ clusteringMainPanelServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns 
     
-    output$test_output <- renderUI({ # idk why I can't get the conditional panels working with the namespacing
+    output$data_display <- renderUI({ # idk why I can't get the conditional panels working with the namespacing
       if (is.data.frame(r$df) & is.null(r$reduced_embeddings)){
         DT::dataTableOutput((ns("uploaded_data")))
       } else if (!is.null(r$reduced_embeddings)){

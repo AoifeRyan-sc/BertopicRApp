@@ -5,3 +5,4 @@
 .test
 testing_data\
 working_docs\
+.DS_Store
