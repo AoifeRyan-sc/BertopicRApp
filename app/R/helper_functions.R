@@ -157,10 +157,15 @@ createUmap <- function(source_id, df = df, colour_var, title){
   } else{
     colour_pal <- pals::stepped2(length(unique(colour_var)))
   }
-  print(class(colour_var))
-  print(class(df))
+
+  # remove later
+  # if (is.null(colour_var)){
+  #   df <- df %>% dplyr::mutate(topics =  1)
+  # } else {
+  #   df <- df %>% dplyr::mutate(topics = as.factor(colour_var)) 
+  # }
   
-  p <- df %>% dplyr::mutate(topics = as.factor(colour_var)) %>%
+  p <- df %>%
     plotly::plot_ly(x = ~v1,
                     y = ~v2,
                     color = ~topics,

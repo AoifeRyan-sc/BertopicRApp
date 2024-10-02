@@ -101,8 +101,8 @@ clusteringReduceServer <- function(id, r){
         }
     })
     
-    # modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
-    # modellingServer("modelling_selection", r)
+    # modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
+    modellingServer("modelling_selection", r)
     
   })
 }
@@ -149,8 +149,6 @@ clusteringMainPanelServer <- function(id, r){
 
   output$cluster_plot <- plotly::renderPlotly({
     shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
-    message("time for plots")
-
     createUmap("umap_clustering", df = r$df, colour_var = r$clusters,
                title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
     
