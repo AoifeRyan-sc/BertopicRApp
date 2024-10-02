@@ -54,14 +54,17 @@ modellingServer <- function(id, r){ # do I need df?
     hdb_metric <- shiny::reactive(input$hdbscan_metric)
     
     shiny::observe({
+      shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
       print("clustering")
+      print(r$reduced_embeddings)
       if (input$cluster_method == "HDBSCAN"){
         clusterer = BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
       } else if (input$cluster_method == "K-Means"){
         clusterer = BertopicR::bt_make_clusterer_kmeans(n_clusters = num_clusters())
       }
-      
-      r$clusters <- BertopicR::bt_do_clustering(clusterer, r$reduced_embeddings())
+      print(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+      print(clusterer)
+      r$clusters <- BertopicR::bt_do_clustering(clusterer, r$reduced_embeddings)
     })
     
     # 

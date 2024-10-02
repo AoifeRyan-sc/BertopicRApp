@@ -14,11 +14,12 @@ clusteringUploadServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    r$df <- shiny::reactive({
+    # r$df <- shiny::reactive({
+    shiny::observe({
       shiny::req(input$data_upload)
       
       ext <- tools::file_ext(input$data_upload$name)
-      df <- switch(ext,
+      r$df <- switch(ext,
                    csv = readr::read_csv(input$data_upload$datapath),
                    tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
                    xlsx = readxl::read_xlsx(input$data_upload$datapath),
@@ -31,7 +32,7 @@ clusteringUploadServer <- function(id, r){
     output$data_upload_error_message <- shiny::renderUI({
       
       required_cols <- c("docs", "embeddings", "v1", "v2")  # Add your required column names here
-      missing_cols <- setdiff(required_cols, colnames(r$df()))
+      missing_cols <- setdiff(required_cols, colnames(r$df))
       
       if (length(missing_cols) > 0) {
         shiny::tagList(
@@ -109,11 +110,23 @@ clusteringMainPanelUi <- function(id){
   ns <- NS(id)
   
   shiny::tagList(
-    shiny::conditionalPanel(
-      condition = "input.clustering_main_panel-data_prep_panel == 'upload'", ns = ns,
-      DT::dataTableOutput(ns("uploaded_data")),
-    ),
-    shiny::uiOutput(ns("cluster_plot_display")),
+    # print(ns("data_prep_panel")),
+    shiny::uiOutput(ns("test_output")),
+    # shiny::conditionalPanel(
+    #   # print(sprintf("input['%s'] === 'upload'", ns("data_prep_panel"))),
+    #   # condition = sprintf("input['%s'] == 'upload'", ns("data_prep_panel")),
+    #   # condition = paste0("input['", ns("data_prep_panel"), "'] == 'upload'"),
+    #   condition = "input['clustering_panel-clustering_main_panel-data_prep_panel'] == 'upload'",
+    #   # condition = "input.data_prep_panel == 'upload'", ns = ns("data_prep_panel"),
+    #   DT::dataTableOutput(ns("uploaded_data")),
+    # ),
+    # shiny::conditionalPanel(
+    #   condition = paste0("input['", ns("data_prep_panel"), "'] == 'cluster'"),
+    #   # condition = sprintf("input['%s'] != 'upload'", ns("data_prep_panel")),
+    #   # condition = "input.data_prep_panel != 'upload'", ns = ns("data_prep_panel"),
+    #   shiny::uiOutput(ns("cluster_plot_display"))
+    # ),
+    # shiny::uiOutput(ns("cluster_plot_display")),
     DT::dataTableOutput(ns("selected_data_df")),
     shiny::downloadButton(ns("data_download_clustering"), label = "Download Data Table")
   )
@@ -123,36 +136,46 @@ clusteringMainPanelServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns 
     
+    output$test_output <- renderUI({ # idk why I can't get the conditional panels working with the namespacing
+      if (is.data.frame(r$df) & is.null(r$reduced_embeddings)){
+        DT::dataTableOutput((ns("uploaded_data")))
+      } else if (!is.null(r$reduced_embeddings)){
+        plotly::plotlyOutput(ns("cluster_plot"))
+      }
+    })
+    
     output$uploaded_data <- DT::renderDataTable({
-      printdf <- r$df() %>% dplyr::select(-embeddings)
+      req(is.data.frame(r$df))
+      printdf <- r$df %>% dplyr::select(-embeddings)
       printdf
     })
     
-    output$cluster_plot_display <- shiny::renderUI({
-      if (!is.null(r$df())) {
-        plotly::plotlyOutput(ns("cluster_plot"))
-        
-      } else {
-        shiny::tagList(
-          shiny::h4("Warning: Embeddings have not been reduced."),
-          shiny::p("To reduce embedding, go to the `Reduce Embeddings` tab, choose your desired parameters, and click `Reduce`.")
-        )
-      }
-    }) 
+    # output$cluster_plot_display <- shiny::renderUI({
+    #   if (!is.null(r$df)) {
+    #     plotly::plotlyOutput(ns("cluster_plot"))
+    #     
+    #   } else {
+    #     shiny::tagList(
+    #       shiny::h4("Warning: Embeddings have not been reduced."),
+    #       shiny::p("To reduce embedding, go to the `Reduce Embeddings` tab, choose your desired parameters, and click `Reduce`.")
+    #     )
+    #   }
+    # }) 
 
-    output$cluster_plot <- plotly::renderPlotly({
-      shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
-      print(r$clusters)
-      message("time for plots")
-      createUmap("umap_clustering", df = r$df, colour_var = r$clusters,
-                 title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
-    })
+  output$cluster_plot <- plotly::renderPlotly({
+    shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+    message("time for plots")
+
+    createUmap("umap_clustering", df = r$df, colour_var = r$clusters,
+               title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
+    
+  })
 
     display_data <- shiny::reactive({
       # shiny::req(reduced_embeddings()) # delaying this to avoid error message
       shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
       selected <- plotly::event_data(event = "plotly_selected", source = "umap_clustering")
-      df_temp <- r$df() %>% dplyr::select(-c(embeddings, v1, v2))
+      df_temp <- r$df %>% dplyr::select(-c(embeddings, v1, v2))
       df_temp[df_temp$rowid %in% selected$customdata, ] %>%
         dplyr::select(-rowid)
 
