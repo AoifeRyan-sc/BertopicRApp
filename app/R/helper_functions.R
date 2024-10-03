@@ -5,36 +5,75 @@
 #'
 #' @keywords internal
 #'
-reducingParamsUi <- function(id, id_num){
-  ns <- shiny::NS(id)
-  shiny::tagList(
-    shiny::div(
-      class = "row",
-      shiny::div(
-        class = "col-md-6",
-        shiny::numericInput(ns(paste0("n_neighbours", id_num)), "No. of Nearest Neighbours", value = 15)
-      ),
-      shiny::div(
-        class= "col-md-6",
-        shiny::numericInput(ns(paste0("n_components", id_num)), "No. of Dimensions", value = 5)
-      ),
-      style = "margin-top: 30px"
-    ),
-    shiny::div(
-      class = "row",
-      shiny::div(
-        class = "col-md-7",
-        shiny::numericInput(ns(paste0("min_dist", id_num)), "Min Distance Between Points", value = 0)
-      ),
-      shiny::div(
-        class= "col-md-5",
-        shiny::selectInput(ns(paste0("reducing_metric", id_num)), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
-      )
-    ),
-    shiny::actionButton(ns(paste0("do_reducing_option", id_num)), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
-                        width = "100%", style = "margin-bottom: 30px; border-width: 2px;")
-  )
+# # reducingParamsUi <- function(id, id_num){
+#   ns <- shiny::NS(id)
+#   shiny::tagList(
+#     shiny::div(
+#       class = "row",
+#       shiny::div(
+#         class = "col-md-6",
+#         shiny::numericInput(ns(paste0("n_neighbours", id_num)), "No. of Nearest Neighbours", value = 15)
+#       ),
+#       shiny::div(
+#         class= "col-md-6",
+#         shiny::numericInput(ns(paste0("n_components", id_num)), "No. of Dimensions", value = 5)
+#       ),
+#       style = "margin-top: 30px"
+#     ),
+#     shiny::div(
+#       class = "row",
+#       shiny::div(
+#         class = "col-md-7",
+#         shiny::numericInput(ns(paste0("min_dist", id_num)), "Min Distance Between Points", value = 0)
+#       ),
+#       shiny::div(
+#         class= "col-md-5",
+#         shiny::selectInput(ns(paste0("reducing_metric", id_num)), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
+#       )
+#     ),
+#     shiny::actionButton(ns(paste0("do_reducing_option", id_num)), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
+#                         width = "100%", style = "margin-bottom: 30px; border-width: 2px;")
+#   )
+# }
+
+embed_docs <- function(doc, embedding_model = "all-MiniLM-L6-v2") {
+  
+  api_token <- Sys.getenv("HUGGINGFACE_API_KEY")
+  base_hf_st_url <- "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/"
+  endpoint_hf_st <- embedding_model
+  
+  # create the request with retry mechanism
+  response <- httr2::request(base_hf_st_url) %>%
+    httr2::req_url_path_append(endpoint_hf_st) %>% 
+    httr2::req_headers(
+      "Authorization" = paste("Bearer", api_token)
+      # "Ret"
+    ) %>%
+    httr2::req_body_json(doc) %>%
+    httr2::req_retry(max_tries = 10, # select a maximum of 10 retries
+                     backoff = ~ 5, # constant 2s delay after failure
+                     is_transient = \(resp) httr2::resp_status(resp) %in% c(429, 500, 503)) %>% # specify common transient errors
+    httr2::req_perform()
+  
+  # if response status isn't 200(OK), stop function
+  if (httr2::resp_status(response) != 200) {
+    # if transient error met, print message
+    if (httr2::resp_status(response) %in% c(429, 500, 503)) {
+      message("Max retries reached and timed out, please try again or check server-side connection.")
+    }
+    stop("Request failed with status: ", httr2::resp_status(response))
+  }
+  
+  # return cosine similarity matrix
+  data <- httr2::resp_body_json(response) %>% 
+    unlist() %>% 
+    as.data.frame() %>%
+    t() %>%
+    as.data.frame()
+  
+  return(data)
 }
+
 
 #' @title identify and visualises the textual differences between groups
 #'

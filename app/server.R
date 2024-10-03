@@ -4,10 +4,11 @@ server <- function(input, output, session) {
   
   r <- shiny::reactiveValues(model = NULL,
                              reduced_embeddings = NULL,
+                             embedding_happening = FALSE,
                              clusters = NULL)
   
   # reducingServer("reducing_panel", df = df)
-  
+  uploadServer("upload_panel", r)
   clusteringServer("clustering_panel", r)
   # observe({
   #   clusters <- clustering_output$clusters()

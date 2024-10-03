@@ -79,9 +79,9 @@ modellingServer <- function(id, r){ # do I need df?
         r$clusters <- shiny::reactive({
           print(clusterer())
           req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
-          browser()
           BertopicR::bt_do_clustering(clusterer(), r$reduced_embeddings)
           })
+        
     #
     
     # clusterer <- shiny::reactive({

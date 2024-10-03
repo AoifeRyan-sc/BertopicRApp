@@ -10,6 +10,14 @@ ui <- fluidPage(
       #          titlePanel("Reduce Embeddings"),
       #          reducingUi("reducing_panel")
       # ),
+      tabPanel("Uploading",
+               titlePanel("Upload Data"),
+               uploadUi("upload_panel")
+      ),
+      tabPanel("Embedding",
+               titlePanel("Embedding"),
+               # EmbeddingUi("embedding_panel")
+      ),
       tabPanel("Clustering",
                titlePanel("Clustering"),
                clusteringUi("clustering_panel")

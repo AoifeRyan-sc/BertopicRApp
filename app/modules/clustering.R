@@ -14,12 +14,12 @@ shiny::tagList(
     shiny::sidebarPanel(
       shiny::tabsetPanel(
         id = ns("data_prep_panel"), 
-        shiny::tabPanel(
-          value = "upload",
-          "Upload Data",
-          shiny::br(),
-          clusteringUploadUi(ns("clustering_upload"))
-        ),
+        # shiny::tabPanel(
+        #   value = "upload",
+        #   "Upload Data",
+        #   shiny::br(),
+        #   clusteringUploadUi(ns("clustering_upload"))
+        # ),
         shiny::tabPanel(
           value = "reduce",
           "Reduce Embeddings",
@@ -35,7 +35,7 @@ shiny::tagList(
       ) 
     ),
   shiny::mainPanel(
-   clusteringMainPanelUi(ns("clustering_main_panel"))
+   # clusteringMainPanelUi(ns("clustering_main_panel"))
     )
 )
 )
@@ -53,9 +53,9 @@ clusteringServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    clusteringUploadServer("clustering_upload", r)
+    # clusteringUploadServer("clustering_upload", r)
     clusteringReduceServer("clustering_reduce", r)
-    clusteringMainPanelServer("clustering_main_panel", r)
+    # clusteringMainPanelServer("clustering_main_panel", r)
     modellingServer("modelling_selection", r)
     # df <- shiny::reactive({
     #   shiny::req(input$data_upload)

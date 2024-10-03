@@ -1,55 +1,61 @@
-clusteringUploadUi <- function(id){
-  ns <- NS(id)
-  
-  shiny::tagList(
-    shiny::fileInput(
-      ns("data_upload"), "Upload your data",
-      accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
-    shiny::uiOutput(ns("data_upload_error_message")),
-    shiny::verbatimTextOutput(ns("reduced_embeddings_sample"))
-  )
-}
+# clusteringUploadUi <- function(id){
+#   ns <- NS(id)
+#   
+#   shiny::tagList(
+#     shiny::fileInput(
+#       ns("data_upload"), "Upload your data",
+#       accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
+#     shiny::uiOutput(ns("data_upload_error_message")),
+#     shiny::verbatimTextOutput(ns("reduced_embeddings_sample"))
+#   )
+# }
 
-clusteringUploadServer <- function(id, r){
-  shiny::moduleServer(id, function(input, output, session){
-    ns <- session$ns
-    
-    # r$df <- shiny::reactive({
-    shiny::observe({
-      shiny::req(input$data_upload)
-      
-      ext <- tools::file_ext(input$data_upload$name)
-      r$df <- switch(ext,
-                   csv = readr::read_csv(input$data_upload$datapath),
-                   tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
-                   xlsx = readxl::read_xlsx(input$data_upload$datapath),
-                   rds = readRDS(input$data_upload$datapath),
-      ) %>%
-        dplyr::mutate(rowid = dplyr::row_number(), .before = 1)
-      
-    })
-    
-    output$data_upload_error_message <- shiny::renderUI({
-      req(input$data_upload)
-      
-      required_cols <- c("docs", "embeddings", "v1", "v2")  # Add your required column names here
-      missing_cols <- setdiff(required_cols, colnames(r$df))
-      
-      if (length(missing_cols) > 0) {
-        shiny::tagList(
-          shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
-        )
-      }
-    })
-    
-    shiny::observeEvent(input$data_upload, {
-      shinyjs::reset("reduced_embeddings_upload")
-      r$reduced_embeddings <- NULL 
-    })
-    
-    
-  })
-}
+# clusteringUploadServer <- function(id, r){
+#   shiny::moduleServer(id, function(input, output, session){
+#     ns <- session$ns
+#     
+#     # r$df <- shiny::reactive({
+#     shiny::observe({
+#       shiny::req(input$data_upload)
+#       
+#       ext <- tools::file_ext(input$data_upload$name)
+#       r$df <- switch(ext,
+#                    csv = readr::read_csv(input$data_upload$datapath),
+#                    tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
+#                    xlsx = readxl::read_xlsx(input$data_upload$datapath),
+#                    rds = readRDS(input$data_upload$datapath),
+#       ) %>%
+#         dplyr::mutate(rowid = dplyr::row_number(), .before = 1)
+#       
+#     })
+#     
+#     output$data_upload_error_message <- shiny::renderUI({
+#       req(input$data_upload)
+#       
+#       required_cols <- c("docs")
+#                          # , "embeddings", "v1", "v2")  # Add your required column names here
+#       missing_cols <- setdiff(required_cols, colnames(r$df))
+#       
+#       if (length(missing_cols) > 0) {
+#         shiny::tagList(
+#           shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
+#         )
+#       } 
+#       # else if (!c("v1", "v2") %in% colnames(r$df)){
+#       #   shiny::tagList(
+#       #     shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
+#       #   )
+#       # } # I think maybe we don't need this
+#     })
+#     
+#     shiny::observeEvent(input$data_upload, {
+#       shinyjs::reset("reduced_embeddings_upload")
+#       r$reduced_embeddings <- NULL 
+#     })
+#     
+#     
+#   })
+# }
 
 clusteringReduceUi <- function(id){
   ns <- NS(id)
@@ -125,7 +131,7 @@ clusteringMainPanelServer <- function(id, r){
       if (is.data.frame(r$df) & is.null(r$reduced_embeddings)){
         DT::dataTableOutput((ns("uploaded_data")))
       } else if (!is.null(r$reduced_embeddings)){
-        plotly::plotlyOutput(ns("cluster_plot"))
+        shinycssloaders::withSpinner(plotly::plotlyOutput(ns("cluster_plot")))
       }
     })
     

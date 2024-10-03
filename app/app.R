@@ -17,7 +17,7 @@ source(here("app/R/helper_functions.R"))
 source(here("app/R/reducingAsync.R"))
 
 # source(here("app/www/styles.css"))
-
+source(here("app/modules/upload.R"))
 source(here("app/modules/reduce.R"))
 source(here("app/modules/modelling.R"))
 source(here("app/modules/modelExplore.R"))
