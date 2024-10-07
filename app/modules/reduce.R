@@ -92,7 +92,7 @@ reducingCalcUi <- function(id){
         ),
         htmltools::div(
           class = "reducing-embeddings",
-          span(class = "timer-emoji", "⏳"),
+          span(class = "reduce-timer-emoji", "⏳"),
           span(class = "reducing-text", "Reducing Embeddings")
         ))
       } else if (stringr::str_detect(reduced_embeddings1$progress(), "Epochs completed")){

@@ -9,6 +9,7 @@ server <- function(input, output, session) {
   
   # reducingServer("reducing_panel", df = df)
   uploadServer("upload_panel", r)
+  embedReduceServer("embedding_reducing_panel", r)
   clusteringServer("clustering_panel", r)
   # observe({
   #   clusters <- clustering_output$clusters()

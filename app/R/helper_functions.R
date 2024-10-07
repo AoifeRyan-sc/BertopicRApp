@@ -190,20 +190,16 @@ calculate_wlos_app <- function(df, topic_var, text_var = Message, top_n = 30, fi
 #' @noRd
 #' 
 createUmap <- function(source_id, df = df, colour_var, title){
-  print(class(colour_var))
+  print(paste0("colour var class: ", class(colour_var)))
+  full_palette <- pals::stepped2(20)
+  n_clusters <- length(unique(colour_var))
 
   if (-1 %in% colour_var){
-    colour_pal <- c("grey80", pals::stepped2(length(unique(colour_var)) - 1))
+    indices <- round(seq(1, 20, length.out = n_clusters))
+    colour_pal <- c("grey80", full_palette[indices - 1])
   } else{
-    colour_pal <- pals::stepped2(length(unique(colour_var)))
+    colour_pal <- full_palette[indices]
   }
-
-  # remove later
-  # if (is.null(colour_var)){
-  #   df <- df %>% dplyr::mutate(topics =  1)
-  # } else {
-  #   df <- df %>% dplyr::mutate(topics = as.factor(colour_var)) 
-  # }
   
   p <- df %>% dplyr::mutate(topics = as.factor(colour_var))  %>%
     plotly::plot_ly(x = ~v1,

@@ -38,6 +38,10 @@
   animation: pulse 1.5s infinite;
 }
 
+.reduce-timer-emoji {
+  font-size: 24px;
+}
+
 .check-emoji {
   font-size: 24px;
 }

@@ -12,30 +12,35 @@ ns <- shiny::NS(id)
 shiny::tagList(
   shiny::sidebarLayout(
     shiny::sidebarPanel(
-      shiny::tabsetPanel(
-        id = ns("data_prep_panel"), 
-        # shiny::tabPanel(
-        #   value = "upload",
-        #   "Upload Data",
-        #   shiny::br(),
-        #   clusteringUploadUi(ns("clustering_upload"))
-        # ),
-        shiny::tabPanel(
-          value = "reduce",
-          "Reduce Embeddings",
-          shiny::br(),
-          clusteringReduceUi(ns("clustering_reduce"))
-        ),
-        shiny::tabPanel(
-          value = "cluster",
-          "Cluster",
-          shiny::br(),
-          modellingUi(ns("modelling_selection"))
-          )
-      ) 
+      # modellingUi(ns("modelling_selection"))
+      shiny::selectInput(ns("cluster_method"), "Clustering Method", choices = c("HDBSCAN", "K-Means")),
+      shiny::conditionalPanel(
+        condition = "input.cluster_method == 'K-Means'", ns = ns,
+        shiny::numericInput(ns("n_clusters"), "Number of Clusters", value = 10)
+      ),
+      shiny::conditionalPanel(
+        condition = "input.cluster_method == 'HDBSCAN'", ns = ns,
+        shiny::sliderInput(ns("min_cluster_size"), "Minimum cluster size:",
+                           min = 2, max = 20, value = 20, round = TRUE
+                           # step = ceiling((20 - 2)/5)
+        ), # arbitrarily setting the defaults
+        shiny::sliderInput(ns("min_sample_size"), "Minimum number of samples:",
+                           min = 1, max = 10, value = 1), # these values update as defined in the server
+        shiny::selectInput(ns("hdbscan_metric"), "Clustering Metric", choices = c(
+          # "cosine", - Not supported by sklearn
+          "euclidean", "braycurtis", "canberra", "chebyshev", "cityblock", "correlation",  "dice", "hamming", "jaccard", "jensenshannon", "kulczynski1", "mahalanobis", "matching", "minkowski", "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener", "sokalsneath", "sqeuclidean", "yule")),
+        shiny::radioButtons(ns("hdbscan_cluster_selection"), "Cluster Selection Method", choices = c("eom", "leaf"))
+      ),
+      shiny::actionButton(ns("do_modelling"), "Model", class = "btn-succes"),
+      shiny::actionButton(ns("reset_model"), "Reset", classs = "btn-danger"),
+      shiny::verbatimTextOutput(ns("complete_message"))
+
     ),
   shiny::mainPanel(
    # clusteringMainPanelUi(ns("clustering_main_panel"))
+    shiny::uiOutput(ns("data_display")),
+    DT::dataTableOutput(ns("selected_data_df")),
+    shiny::downloadButton(ns("data_download_clustering"), label = "Download Data Table")
     )
 )
 )
@@ -53,131 +58,82 @@ clusteringServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    # clusteringUploadServer("clustering_upload", r)
-    clusteringReduceServer("clustering_reduce", r)
-    # clusteringMainPanelServer("clustering_main_panel", r)
-    modellingServer("modelling_selection", r)
-    # df <- shiny::reactive({
-    #   shiny::req(input$data_upload)
-    # 
-    #   ext <- tools::file_ext(input$data_upload$name)
-    #   df <- switch(ext,
-    #                csv = readr::read_csv(input$data_upload$datapath),
-    #                tsv = vroom::vroom(input$data_upload$datapath, delim = "\t"),
-    #                xlsx = readxl::read_xlsx(input$data_upload$datapath),
-    #                rds = readRDS(input$data_upload$datapath),
-    #                shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
-    #   ) %>%
-    #     dplyr::mutate(rowid = dplyr::row_number(), .before = 1)
-    # 
-    # })
+    min_cluster <- shiny::reactive(input$min_cluster_size)
+    min_samples <- shiny::reactive(input$min_sample_size)
+    num_clusters <- shiny::reactive(input$n_clusters)
+    select_method <- shiny::reactive(input$hdbscan_cluster_selection)
+    hdb_metric <- shiny::reactive(input$hdbscan_metric)
     
-    # output$data_upload_error_message <- shiny::renderUI({
-    #   
-    #   required_cols <- c("docs", "embeddings", "v1", "v2")  # Add your required column names here
-    #   missing_cols <- setdiff(required_cols, colnames(df()))
-    # 
-    #   if (length(missing_cols) > 0) {
-    #       shiny::tagList(
-    #        f shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
-    #     )
-    #   }
-    # })
+    clusterer <- shiny::reactive({
+      if (input$cluster_method == "HDBSCAN"){
+        BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
+      } else if (input$cluster_method == "K-Means"){
+        BertopicR::bt_make_clusterer_kmeans(n_clusters = num_clusters())
+      }
+    })
     
-    # output$uploaded_data <- DT::renderDataTable({
-    #   printdf <- df() %>% dplyr::select(-embeddings)
-    #   printdf
-    # })
-    # 
-    # reduced_embeddings_calculated <- reducingCalcServer("reduction_ui", df = df)
-    # reduced_embeddings_loaded <- shiny::reactive({
-    #   shiny::req(input$reduced_embeddings_upload)
-    # 
-    #         ext <- tools::file_ext(input$reduced_embeddings_upload$name)
-    #         reduced_embeddings <- switch(ext,
-    #                      csv = readr::read_csv(input$reduced_embeddings_upload$datapath, show_col_types = FALSE),
-    #                      tsv = vroom::vroom(input$reduced_embeddings_upload$datapath, delim = "\t"),
-    #                      xlsx = readxl::read_xlsx(input$reduced_embeddings_upload$datapath),
-    #                      rds = readRDS(input$reduced_embeddings_upload$datapath),
-    #                      shiny::validate("Invalid file; Please upload a .xlsx, .rds, or .csv file")
-    #         )
-    # })
+    r$clusters <- shiny::reactive({
+      print(clusterer())
+      req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+      BertopicR::bt_do_clustering(clusterer(), r$reduced_embeddings)
+    })
     
-    # r <- shiny::reactiveValues(reduced_embeddings = NULL)
-    # 
-    # observe({
-    #   r$reduced_embeddings <- 
-    #     if (input$load_or_reduce_embeddings == "Calculate in app"){
-    #       reduced_embeddings_calculated()
-    #     } else {
-    #       reduced_embeddings_loaded()
-    #     }
-    # })
     
-    # shiny::observeEvent(input$data_upload, {
-    #   shinyjs::reset("reduced_embeddings_upload")
-    #   r$reduced_embeddings <- NULL 
-    # })
-    # 
-    ###### I HAVE JUST REMOVED THIS CODE -------
-    # reduced_embeddings <- shiny::reactive({
-    #   r$reduced_embeddings
-    # }) # this is a lazy way of dealing with the fact that I added r as a container so that I don't have to change subsequent code
-    ####################################
-    # modelling_outputs <- modellingServer("modelling_selection", df = df, reduced_embeddings = reduced_embeddings)
+    output$data_display <- renderUI({ # idk why I can't get the conditional panels working with the namespacing
+      if (is.data.frame(r$df) & is.null(r$reduced_embeddings)){
+        DT::dataTableOutput((ns("uploaded_data")))
+      } else if (!is.null(r$reduced_embeddings)){
+        print("plot stuff")
+        shinycssloaders::withSpinner(plotly::plotlyOutput(ns("cluster_plot")))
+      }
+    })
     
-    # clusters <- modelling_outputs$clusters
-    # model <- modelling_outputs$model
-    # cluster_model <- modelling_outputs$cluster_model
-
-    # output$cluster_plot_display <- shiny::renderUI({
-    #   if (!is.null(df())) {
-    #    plotly::plotlyOutput(ns("cluster_plot"))
-    #     
-    #   } else {
-    #     shiny::tagList(
-    #       shiny::h4("Warning: Embeddings have not been reduced."),
-    #       shiny::p("To reduce embedding, go to the `Reduce Embeddings` tab, choose your desired parameters, and click `Reduce`.")
-    #     )
-    #     }
-    # }) # conditional display 
-    # 
-
-    # output$cluster_plot <- plotly::renderPlotly({
-    #   shiny::req(is.array(reduced_embeddings()) | is.data.frame(reduced_embeddings()))
-    #   createUmap("umap_clustering", df = df, colour_var = clusters,
-    #                   title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
-    # })
-    # 
+    output$uploaded_data <- DT::renderDataTable({
+      req(is.data.frame(r$df))
+      printdf <- r$df %>% dplyr::select(-embeddings)
+      printdf
+    })
     
-    # display_data <- shiny::reactive({
-    #   # shiny::req(reduced_embeddings()) # delaying this to avoid error message
-    #   shiny::req(is.array(reduced_embeddings()) | is.data.frame(reduced_embeddings()))
-    #   selected <- plotly::event_data(event = "plotly_selected", source = "umap_clustering")
-    #   df_temp <- df() %>% dplyr::select(-c(embeddings, v1, v2))
-    #   df_temp[df_temp$rowid %in% selected$customdata, ] %>%
-    #     dplyr::select(-rowid)
-    #   
-    # })
-
-    # output$selected_data_df <- DT::renderDataTable({
-    #  display_data()
-    # })
+    output$cluster_plot <- plotly::renderPlotly({
+      shiny::req(is.array(r$reduced_embeddings2d) | is.data.frame(r$reduced_embeddings2d))
+      print("plot stuff 2")
+      r$df$v1 <- r$reduced_embeddings2d[,1]
+      r$df$v2 <- r$reduced_embeddings2d[,2]
+      createUmap("umap_clustering", df = r$df, colour_var = r$clusters(),
+                 title = "UMAP of document embeddings: Cluster investigation") # can remove the id here
+      
+    })
     
-    # output$data_download_clustering <- shiny::downloadHandler(
-    #   filename = function() {
-    #     paste0("clustering_data_", format(Sys.time(), "%d-%m-%Y_%H:%M:%S"), ".csv")
-    #   },
-    #   content = function(file) {
-    #     utils::write.csv(display_data(), file, row.names = FALSE)
-    #   }
-    # )
-
-    list(clusters = reactive({r$clusters()}),
-         model = reactive({r$model()}),
-         cluster_model = reactive({r$cluster_model()}),
-         df = reactive({r$df()})
+    display_data <- shiny::reactive({
+      # shiny::req(reduced_embeddings()) # delaying this to avoid error message
+      shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
+      selected <- plotly::event_data(event = "plotly_selected", source = "umap_clustering")
+      df_temp <- r$df %>% dplyr::select(-c(embeddings, v1, v2))
+      df_temp[df_temp$rowid %in% selected$customdata, ] %>%
+        dplyr::select(-rowid)
+      
+    })
+    
+    output$selected_data_df <- DT::renderDataTable({
+      display_data()
+    })
+    
+    output$data_download_clustering <- shiny::downloadHandler(
+      filename = function() {
+        paste0("clustering_data_", format(Sys.time(), "%d-%m-%Y_%H:%M:%S"), ".csv")
+      },
+      content = function(file) {
+        utils::write.csv(display_data(), file, row.names = FALSE)
+      }
     )
+    # clusteringMainPanelServer("clustering_main_panel", r)
+    # modellingServer("modelling_selection", r)
+
+    # list(clusters = reactive({r$clusters()}),
+    #      model = reactive({r$model()}),
+    #      cluster_model = reactive({r$cluster_model()}),
+    #      df = reactive({r$df()})
+    # )
 
   })
 }

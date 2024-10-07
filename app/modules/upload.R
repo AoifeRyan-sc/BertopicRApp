@@ -14,13 +14,13 @@ uploadUi <- function(id) {
         ns("data_upload"), "Upload your data",
         accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
       shiny::uiOutput(ns("data_upload_error_message")),
-      shiny::actionButton(ns("embed_button"), label = shiny::HTML("<strong>Embed</strong>"), class = "btn-succes", 
-                          width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
+      # shiny::actionButton(ns("embed_button"), label = shiny::HTML("<strong>Embed</strong>"), class = "btn-succes", 
+                          # width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
       shiny::uiOutput(ns("embed_status"))
     ),
     shiny::mainPanel(
       DT::dataTableOutput((ns("uploaded_data"))),
-      shiny::downloadButton(ns("data_download_clustering"), label = "Download Data Table")
+      # shiny::downloadButton(ns("data_download_clustering"), label = "Download Data Table")
     )
   )
 
@@ -75,53 +75,7 @@ uploadServer <- function(id, r){
       printdf
     })
     
-    shiny::observeEvent(input$embed_button, {
-      r$embedding_happening <- "happening"
-      r$embedding_job <- callr::r_bg(function(docs, embedding_model){
-        embedder <- BertopicR::bt_make_embedder_st("all-MiniLM-L6-v2")
-        embeddings <- BertopicR::bt_do_embedding(embedder, docs, accelerator = "mps") # what happens if user doesn't have mps?
-      },
-      args = list(docs = df$docs, embedding_model = "all-MiniLM-L6-v2"),
-      supervise = TRUE)
-    }) 
-    
-    shiny::observe({
-      shiny::req(r$embedding_happening == "happening")
-      shiny::invalidateLater(250)
-      print(r$embedding_job$is_alive() == FALSE)
-
-      if (r$embedding_job$is_alive() == FALSE){
-        r$embedding_happening = "finished"
-        r$embeddings <- r$embedding_job$get_result()
-      }
-    })
-    
-    
-    output$embed_status <- shiny::renderUI({
-      if (r$embedding_happening == "happening"){
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reducing-embeddings",
-            span(class = "timer-emoji", "⏳"),
-            span(class = "reducing-text", "Calculating Embeddings")
-          ))
-      } else if (r$embedding_happening == "finished") {
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reduced-embeddings",
-            span(class = "check-emoji", "✅"),
-            span(class = "reducing-text", "Text Embedded!")
-          ))
-      } else{
-        # htmltools::div()
-      }
-    })
+  
     
   })
 }

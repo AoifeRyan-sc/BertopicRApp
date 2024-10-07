@@ -59,7 +59,7 @@
 
 clusteringReduceUi <- function(id){
   ns <- NS(id)
-  
+
   shiny::tagList(
     shiny::radioButtons(ns("load_or_reduce_embeddings"),
                         "Do you want to load pre-calculate reduced embeddings or do it here?",

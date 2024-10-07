@@ -6,18 +6,18 @@ ui <- fluidPage(
     navbarPage(
       "BertopicR",
       id = "main_navpage",
-      # tabPanel("Reduce Embeddings",
-      #          titlePanel("Reduce Embeddings"),
-      #          reducingUi("reducing_panel")
-      # ),
       tabPanel("Uploading",
                titlePanel("Upload Data"),
                uploadUi("upload_panel")
       ),
-      tabPanel("Embedding",
-               titlePanel("Embedding"),
-               # EmbeddingUi("embedding_panel")
+      tabPanel("Reduce Embeddings",
+               titlePanel("Reduce Embeddings"),
+               embedReduceUi("embedding_reducing_panel")
       ),
+      # tabPanel("Embedding",
+      #          titlePanel("Embedding"),
+      #          embedReduceUi("embedding_reducing_panel")
+      # ),
       tabPanel("Clustering",
                titlePanel("Clustering"),
                clusteringUi("clustering_panel")
