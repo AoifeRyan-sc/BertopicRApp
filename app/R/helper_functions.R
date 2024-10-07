@@ -216,15 +216,15 @@ createUmap <- function(source_id, df = df, colour_var, title){
     plotly::layout(dragmode = "lasso",
                    title = title,
                    xaxis = list(title = "V1",
-                                showline = TRUE,
+                                showline = FALSE,
                                 linecolor = "grey80",
                                 mirror = TRUE,
                                 linewidth = 1),
                    yaxis = list(title = "V2",
-                                showline = TRUE,
+                                showline = FALSE,
                                 linecolor = "grey80",
                                 mirror = TRUE,
-                                linewidth = 1),
+                                linewidth = 1), # can remove all of this if not showing line
                    showlegend = TRUE,
                    legend = list(title = "Topics")) %>%
     plotly::config(

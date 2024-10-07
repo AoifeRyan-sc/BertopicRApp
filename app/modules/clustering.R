@@ -33,7 +33,8 @@ shiny::tagList(
       ),
       shiny::actionButton(ns("do_modelling"), "Model", class = "btn-succes"),
       shiny::actionButton(ns("reset_model"), "Reset", classs = "btn-danger"),
-      shiny::verbatimTextOutput(ns("complete_message"))
+      # shiny::verbatimTextOutput(ns("complete_message"))
+      shinycssloaders::withSpinner(shiny::uiOutput(ns("complete_message")))
 
     ),
   shiny::mainPanel(
@@ -57,18 +58,20 @@ shiny::tagList(
 clusteringServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
-    
-    min_cluster <- shiny::reactive(input$min_cluster_size)
-    min_samples <- shiny::reactive(input$min_sample_size)
-    num_clusters <- shiny::reactive(input$n_clusters)
-    select_method <- shiny::reactive(input$hdbscan_cluster_selection)
-    hdb_metric <- shiny::reactive(input$hdbscan_metric)
+
+    shiny::observe({
+      r$min_cluster <- input$min_cluster_size
+      r$min_samples <- input$min_sample_size
+      r$num_clusters <- input$n_clusters
+      r$select_method <- input$hdbscan_cluster_selection
+      r$hdb_metric <- input$hdbscan_metric
+    })
     
     clusterer <- shiny::reactive({
       if (input$cluster_method == "HDBSCAN"){
-        BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = min_cluster(), min_samples = min_samples(), cluster_selection_method = select_method(), metric = hdb_metric())
+        BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = r$min_cluster, min_samples = r$min_samples, cluster_selection_method = r$select_method, metric = r$hdb_metric)
       } else if (input$cluster_method == "K-Means"){
-        BertopicR::bt_make_clusterer_kmeans(n_clusters = num_clusters())
+        BertopicR::bt_make_clusterer_kmeans(n_clusters = r$num_clusters)
       }
     })
     
@@ -105,7 +108,6 @@ clusteringServer <- function(id, r){
     })
     
     display_data <- shiny::reactive({
-      # shiny::req(reduced_embeddings()) # delaying this to avoid error message
       shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
       selected <- plotly::event_data(event = "plotly_selected", source = "umap_clustering")
       df_temp <- r$df %>% dplyr::select(-c(embeddings, v1, v2))
@@ -126,13 +128,81 @@ clusteringServer <- function(id, r){
         utils::write.csv(display_data(), file, row.names = FALSE)
       }
     )
+    
+        shiny::observeEvent(r$min_cluster, { 
+          shiny::updateSliderInput(inputId = "min_sample_size", max = r$min_cluster, value = r$min_cluster)
+        }) # updating slider range
+
+        shiny::observeEvent(r$df, {
+          max_val <- ceiling(nrow(r$df)/2)
+          min_val <- 2
+          # range <- max_val - min_val
+          shiny::updateSliderInput(inputId = "min_cluster_size", max = max_val,
+                                   step = 1
+                                   # step = ceiling(range/5)
+                                   )
+        }) # updating slider range
+
+        shiny::observeEvent(input$do_modelling, {
+          r$model <- BertopicR::bt_compile_model(embedding_model = BertopicR::bt_empty_embedder(),
+                                    reduction_model = BertopicR::bt_empty_reducer(),
+                                    clustering_model = clusterer())
+          BertopicR::bt_fit_model(model = r$model, documents = r$df$docs, embeddings = r$reduced_embeddings)
+        }) # model
+
+    shiny::observeEvent(input$reset_model, {
+      r$model <- NULL
+    }) # remove model on reset
+
+    shiny::observeEvent(input$do_modelling, {
+      elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clusters",
+                               "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+
+      purrr::map(elements_to_disable, ~ shinyjs::disable(.x))
+    }) # disable buttons
+
+    shiny::observeEvent(input$reset_model, {
+      elements_to_enable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers",
+                              "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+
+      purrr::map(elements_to_enable, ~ shinyjs::enable(.x))
+    }) # enable buttons on reset
+
+    output$complete_message <- shiny::renderUI({
+      if (!is.null(r$model)){
+        htmltools::tagList(
+          htmltools::tags$head(
+            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+          ),
+          htmltools::div(
+            class = "reduced-embeddings",
+            span(class = "check-emoji", "✅"),
+            span(class = "reducing-text", "Text Embedded!")
+          ))
+      } 
+    })
+    #   shiny::renderPrint({
+    #   if (input$do_modelling) {
+    #     shiny::isolate("Model generated with paramters...need to complete this")# NEED TO POPULATE THIS
+    #   } else {
+    #     return("No model generated.")
+    #   }
+    # })
+
+    # r$model <- shiny::reactive({
+    #   r$model
+    # })
+    # 
+    # r$cluster_model <- shiny::reactive({
+    #   input$cluster_method
+    # })
     # clusteringMainPanelServer("clustering_main_panel", r)
     # modellingServer("modelling_selection", r)
 
     # list(clusters = reactive({r$clusters()}),
     #      model = reactive({r$model()}),
     #      cluster_model = reactive({r$cluster_model()}),
-    #      df = reactive({r$df()})
+    #      df = reactive({r$df})
     # )
 
   })

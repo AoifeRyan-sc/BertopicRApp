@@ -54,12 +54,12 @@ modelExploreUi <- function(id){
 #' @param df reactive dataframe containing docs and embedding info 
 #'
 #' @noRd
-modelExploreServer <- function(id, model = model, df = df){
+modelExploreServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
-    
+
     output$topic_summary_display <- shiny::renderUI({
-      if(!is.null(model())){
+      if(!is.null(r$model)){
         shiny::tagList(
           shiny::br(),
           DT::dataTableOutput(ns("topic_summary"))
@@ -71,117 +71,117 @@ modelExploreServer <- function(id, model = model, df = df){
           shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
         )
       }
-    }) # conditional display 
-    
+    }) # conditional display
+
     output$topic_summary <- DT::renderDataTable({
-      model()$get_topic_info() %>%
+      r$model$get_topic_info() %>%
         dplyr::select(-c(Representative_Docs, Representation)) %>%
         DT::datatable(rownames = FALSE,
                       selection = "multiple",
                       width = 4)
     })
-    
+
     selected_cluster <- shiny::reactive({
       shiny::req(input$topic_summary_rows_selected)
       input$topic_summary_rows_selected - 2
     }) # topic selected in topic summary table
-    
+
     df_explore_model <- shiny::reactive({
-      df() %>%
-      dplyr::mutate(topic = model()$topics_) %>%
+      r$df %>%
+      dplyr::mutate(topic = r$model$topics_) %>%
       dplyr::filter(topic %in% as.list(selected_cluster()))
     })
-    
+
     output$doc_breakdown_display <- shiny::renderUI({
-      if(!is.null(model())){
+      if(!is.null(r$model)){
         shiny::tagList(
           shiny::br(),
           DT::dataTableOutput(ns("doc_breakdown"))
         )
-        
+
       } else {
         shiny::tagList(
           shiny::h4("Warning: No model has been generated."),
           shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
         )
       }
-    }) # conditional display 
-    
+    }) # conditional display
+
     output$doc_breakdown <- DT::renderDataTable({
-      df_explore_model() %>%
+      df_explore_r$model %>%
         dplyr::select(docs) %>%
         DT::datatable(selection = "single")
     })
-    
+
     output$model_explore_umap_display <- shiny::renderUI({
-      if(!is.null(model())){
+      if(!is.null(r$model)){
         shiny::tagList(
           shiny::br(),
           plotly::plotlyOutput(ns("model_explore_umap"))
         )
-        
+
       } else {
         shiny::tagList(
           shiny::h4("Warning: No model has been generated."),
           shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
         )
       }
-    }) # conditional display 
-    
-    
+    }) # conditional display
+
     output$model_explore_umap <- plotly::renderPlotly({
-      colour_var <- shiny::reactive({df_explore_model()$topic})
+      colour_var <- shiny::reactive({df_explore_r$model$topic})
       createUmap("model_explore_umap", df = df_explore_model, colour_var = colour_var,
                  title = "UMAP of document embeddings: Topic zoom")
       # plotly::event_register(o, "plotly_selected")
       # o
     })
-    
-    shiny::observeEvent(model(), {
-      named_options <- model()$get_topic_info() %>% dplyr::distinct(Name) %>% dplyr::pull(Name)
-      
-      shiny::updateSelectInput(inputId = "wlo_topic_selection", 
+
+    shiny::observeEvent(r$model, {
+      # browser()
+      named_options <- r$model$get_topic_info() %>% dplyr::distinct(Name) %>% dplyr::pull(Name)
+
+      shiny::updateSelectInput(inputId = "wlo_topic_selection",
                                choices = c(named_options),
                                selected = named_options[1:2])
     })
-    
-    output$wlo_display <- shiny::renderUI({
-      if(!is.null(model())){
-        shiny::plotOutput(ns("wlo"))
-        
-      } else {
-        shiny::tagList(
-          shiny::h4("Warning: No model has been generated."),
-          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
-        )
-      }
-    }) # conditional display 
-    
-    output$wlo <- shiny::renderPlot({
-      data <- model()$get_document_info(docs = df()$docs)
-      data %>% 
-        # dplyr::filter(Name %in% input$wlo_topic_selection) %>%
-        dplyr::filter(Topic %in% selected_cluster()) %>%
-        calculate_wlos_app(topic_var = Topic, 
-                               text_var = Document,
-                               filter_by = "association")
-    })
-    
-    output$representation_display <- shiny::renderUI({
-      if(!is.null(model())){
-        shiny::tagList(
-          # shiny::br(),
-          # plotly::plotOutput(ns("representaion"))
-          shiny::br()
-        )
-        
-      } else {
-        shiny::tagList(
-          shiny::h4("Warning: No model has been generated."),
-          shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
-        )
-      }
-    }) # conditional display 
+
+    # output$wlo_display <- shiny::renderUI({
+    #   if(!is.null(r$model)){
+    #     shiny::plotOutput(ns("wlo"))
+    #     
+    #   } else {
+    #     shiny::tagList(
+    #       shiny::h4("Warning: No model has been generated."),
+    #       shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+    #     )
+    #   }
+    # }) # conditional display 
+    # 
+    # output$wlo <- shiny::renderPlot({
+    #   data <- r$model$get_document_info(docs = r$df$docs)
+    #   data %>% 
+    #     # dplyr::filter(Name %in% input$wlo_topic_selection) %>%
+    #     dplyr::filter(Topic %in% selected_cluster()) %>%
+    #     calculate_wlos_app(topic_var = Topic, 
+    #                            text_var = Document,
+    #                            filter_by = "association")
+    # })
+    # 
+    # output$representation_display <- shiny::renderUI({
+    #   if(!is.null(r$model)){
+    #     shiny::tagList(
+    #       # shiny::br(),
+    #       # plotly::plotOutput(ns("representaion"))
+    #       shiny::br()
+    #     )
+    #     
+    #   } else {
+    #     shiny::tagList(
+    #       shiny::h4("Warning: No model has been generated."),
+    #       shiny::p("To generate a model, set the parameters in the clustering panel to your desired values and click `Model`.")
+    #     )
+    #   }
+    # }) # conditional display 
     
 
   })

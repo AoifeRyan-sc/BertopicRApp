@@ -19,17 +19,17 @@ server <- function(input, output, session) {
   # })
   # 
   shiny::observe({
-    if(!is.null(r$model) && r$cluster_model == "K-Means"){
+    if(!is.null(r$model) && r$cluster_model() == "K-Means"){
       shiny::hideTab(inputId = "main_navpage", target = "Outlier Manipulation")
     }
   })
-  
-  # shiny::observe({
-  #   if(is.null(model())){
-  #     shiny::showTab(inputId = "main_navpage", target = "Outlier Manipulation")
-  #   }
-  # })
   # 
-  # modelExploreServer("explore_model_panel", model = model, df= df)
+  shiny::observe({
+    if(is.null(r$model)){
+      shiny::showTab(inputId = "main_navpage", target = "Outlier Manipulation")
+    }
+  })
+
+  modelExploreServer("explore_model_panel", r)
   # outlierServer("outlier_panel", df = df, model = model, clusters = clusters, embedder = embedder)
 }

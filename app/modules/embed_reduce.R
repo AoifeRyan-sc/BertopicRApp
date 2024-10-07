@@ -1,58 +1,3 @@
-# embedUi <- function(id){
-#   ns <- NS(id)
-#   shiny::tagList(
-#     htmltools::h4("Step 1: Embed Documents"),
-#     shiny::actionButton(ns("embed_button"), label = shiny::HTML("<strong>Embed</strong>"), class = "btn-succes", 
-#                         width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
-#     shiny::uiOutput(ns("embed_status"))
-#   )
-# }
-
-
-reduceUi <- function(id){ 
-  ns <- NS(id)
-  
-  shiny::tagList(
-    htmltools::h4("Step 2: Reduce Embedding Dimension"),
-    shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
-    # "PCA")),
-    shiny::conditionalPanel(
-      condition = "input.reducing_method == 'UMAP'", ns = ns,
-      shiny::div(
-        class = "row",
-        shiny::div(
-          class = "col-md-6",
-          shiny::numericInput(ns("n_neighbours1"), "No. of Nearest Neighbours", value = 15)
-        ),
-        shiny::div(
-          class= "col-md-6",
-          shiny::numericInput(ns("n_components1"), "No. of Dimensions", value = 5)
-        ),
-        style = "margin-top: 30px"
-      ),
-      shiny::div(
-        class = "row",
-        shiny::div(
-          class = "col-md-7",
-          shiny::numericInput(ns("min_dist1"), "Min Distance Between Points", value = 0)
-        ),
-        shiny::div(
-          class= "col-md-5",
-          shiny::selectInput(ns("reducing_metric1"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
-        )
-      ),
-      shiny::uiOutput(ns("print_status")),
-      # shiny::verbatimTextOutput(ns("print_status")),
-      shiny::actionButton(ns("do_reducing"), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
-                          width = "100%", style = "margin-bottom: 30px; border-width: 2px;")
-    ),
-    shiny::conditionalPanel(
-      condition = "input.reducing_method == 'PCA'", ns = ns,
-      "This functionality is not yet implemented in the app."
-    )
-  )
-}
-
 embedReduceUi <- function(id){
   
   ns <- NS(id)
@@ -72,11 +17,11 @@ embedReduceUi <- function(id){
           class = "row",
           shiny::div(
             class = "col-md-6",
-            shiny::numericInput(ns("n_neighbours1"), "No. of Nearest Neighbours", value = 15)
+            shiny::numericInput(ns("n_neighbours"), "No. of Nearest Neighbours", value = 15)
           ),
           shiny::div(
             class= "col-md-6",
-            shiny::numericInput(ns("n_components1"), "No. of Dimensions", value = 5)
+            shiny::numericInput(ns("n_components"), "No. of Dimensions", value = 5)
           ),
           style = "margin-top: 30px"
         ),
@@ -84,11 +29,11 @@ embedReduceUi <- function(id){
           class = "row",
           shiny::div(
             class = "col-md-7",
-            shiny::numericInput(ns("min_dist1"), "Min Distance Between Points", value = 0)
+            shiny::numericInput(ns("min_dist"), "Min Distance Between Points", value = 0)
           ),
           shiny::div(
             class= "col-md-5",
-            shiny::selectInput(ns("reducing_metric1"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
+            shiny::selectInput(ns("reducing_metric"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
           )
         ),
         shiny::uiOutput(ns("print_status")),
@@ -174,39 +119,33 @@ embedReduceServer <- function(id, r){
     
     shiny::observe({
       print(class(r$embeddings))
-      shinyjs::disable("reducing_method")
-      shinyjs::disable("n_neighbours1")
-      shinyjs::disable("n_components1")
-      shinyjs::disable("min_dist1")
-      shinyjs::disable("reducing_metric1")
-      shinyjs::disable("do_reducing")
+      buttons <- c("reducing_method", "n_neighbours", "n_components", "min_dist", "reducing_metric", "do_reducing")
+      lapply(buttons, shinyjs::disable)
+      # purrr::map(buttons, ~ shinyjs::disable(.x))
+      
       if (is.array(r$embeddings) | is.data.frame(r$embeddings)){
-        shinyjs::enable("reducing_method")
-        shinyjs::enable("n_neighbours1")
-        shinyjs::enable("n_components1")
-        shinyjs::enable("min_dist1")
-        shinyjs::enable("reducing_metric1")
-        shinyjs::enable("do_reducing")
+        lapply(buttons, shinyjs::enable)
+        # purrr::map(buttons, ~ shinyjs::enable(.x))
       }
       
     })
     
     reduced_embeddings <- backgroundReduce(
       id = "reduced_embeddings",
-      n_neighbours = input$n_neighbours1,
-      n_components = input$n_components1,
-      min_dist = input$min_dist1,
-      metric = input$reducing_metric1,
+      n_neighbours = input$n_neighbours,
+      n_components = input$n_components,
+      min_dist = input$min_dist,
+      metric = input$reducing_metric,
       embeddings = r$df$embeddings,
       wait_for_event = TRUE
     ) # I think I want to change this to be a normal function
     
     reduced_embeddings2d <- backgroundReduce(
       id = "reduced_embeddings2d",
-      n_neighbours = input$n_neighbours1,
+      n_neighbours = input$n_neighbours,
       n_components = 2,
-      min_dist = input$min_dist1,
-      metric = input$reducing_metric1,
+      min_dist = input$min_dist,
+      metric = input$reducing_metric,
       embeddings = r$df$embeddings,
       wait_for_event = TRUE
     ) # I think I want to change this to be a normal function
