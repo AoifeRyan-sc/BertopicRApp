@@ -190,7 +190,6 @@ calculate_wlos_app <- function(df, topic_var, text_var = Message, top_n = 30, fi
 #' @noRd
 #' 
 createUmap <- function(source_id, df = df, colour_var, title){
-  print(paste0("colour var class: ", class(colour_var)))
   full_palette <- pals::stepped2(20)
   n_clusters <- length(unique(colour_var))
 

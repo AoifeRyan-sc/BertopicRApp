@@ -11,7 +11,7 @@ server <- function(input, output, session) {
   uploadServer("upload_panel", r)
   embedReduceServer("embedding_reducing_panel", r)
   clusteringServer("clustering_panel", r)
-  # observe({
+  # observe( {
   #   clusters <- clustering_output$clusters()
   #   model <- clustering_output$model()
   #   cluster_model <- clustering_output$cluster_model()
@@ -31,5 +31,5 @@ server <- function(input, output, session) {
   })
 
   modelExploreServer("explore_model_panel", r)
-  # outlierServer("outlier_panel", df = df, model = model, clusters = clusters, embedder = embedder)
+  outlierServer("outlier_panel", r)
 }

@@ -76,7 +76,6 @@ clusteringServer <- function(id, r){
     })
     
     r$clusters <- shiny::reactive({
-      print(clusterer())
       req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
       BertopicR::bt_do_clustering(clusterer(), r$reduced_embeddings)
     })
@@ -86,7 +85,6 @@ clusteringServer <- function(id, r){
       if (is.data.frame(r$df) & is.null(r$reduced_embeddings)){
         DT::dataTableOutput((ns("uploaded_data")))
       } else if (!is.null(r$reduced_embeddings)){
-        print("plot stuff")
         shinycssloaders::withSpinner(plotly::plotlyOutput(ns("cluster_plot")))
       }
     })
@@ -99,7 +97,6 @@ clusteringServer <- function(id, r){
     
     output$cluster_plot <- plotly::renderPlotly({
       shiny::req(is.array(r$reduced_embeddings2d) | is.data.frame(r$reduced_embeddings2d))
-      print("plot stuff 2")
       r$df$v1 <- r$reduced_embeddings2d[,1]
       r$df$v2 <- r$reduced_embeddings2d[,2]
       createUmap("umap_clustering", df = r$df, colour_var = r$clusters(),
@@ -110,9 +107,9 @@ clusteringServer <- function(id, r){
     display_data <- shiny::reactive({
       shiny::req(is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings))
       selected <- plotly::event_data(event = "plotly_selected", source = "umap_clustering")
-      df_temp <- r$df %>% dplyr::select(-c(embeddings, v1, v2))
-      df_temp[df_temp$rowid %in% selected$customdata, ] %>%
-        dplyr::select(-rowid)
+      r$df[r$df$rowid %in% selected$customdata, ] %>%
+        dplyr::select(-any_of(c("rowid", "embeddings", "v1", "v2"))) %>%
+        dplyr::relocate("docs", "topics")
       
     })
     
@@ -148,6 +145,7 @@ clusteringServer <- function(id, r){
                                     reduction_model = BertopicR::bt_empty_reducer(),
                                     clustering_model = clusterer())
           BertopicR::bt_fit_model(model = r$model, documents = r$df$docs, embeddings = r$reduced_embeddings)
+          r$df$topics <- r$model$topics_
         }) # model
 
     shiny::observeEvent(input$reset_model, {
@@ -181,29 +179,12 @@ clusteringServer <- function(id, r){
           ))
       } 
     })
-    #   shiny::renderPrint({
-    #   if (input$do_modelling) {
-    #     shiny::isolate("Model generated with paramters...need to complete this")# NEED TO POPULATE THIS
-    #   } else {
-    #     return("No model generated.")
-    #   }
-    # })
 
-    # r$model <- shiny::reactive({
-    #   r$model
-    # })
-    # 
-    # r$cluster_model <- shiny::reactive({
-    #   input$cluster_method
-    # })
-    # clusteringMainPanelServer("clustering_main_panel", r)
-    # modellingServer("modelling_selection", r)
 
-    # list(clusters = reactive({r$clusters()}),
-    #      model = reactive({r$model()}),
-    #      cluster_model = reactive({r$cluster_model()}),
-    #      df = reactive({r$df})
-    # )
+    r$cluster_model <- shiny::reactive({
+      input$cluster_method
+    })
+
 
   })
 }

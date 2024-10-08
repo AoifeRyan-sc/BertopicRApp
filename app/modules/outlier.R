@@ -46,35 +46,37 @@ outlierUi <- function(id) {
 #' 
 #' @noRd
 #' 
-outlierServer <- function(id, df, model, clusters, embedder){
+outlierServer <- function(id, r){
   
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns
     
-    method <- shiny::reactive({input$outlier_method})
-    threshold <- shiny::reactive({input$outlier_threshold})
+    shiny::observe({
+      r$method <- input$outlier_method
+      r$threshold <- input$outlier_threshold
+    })
     
     outliers <- shiny::reactive({
-        if (method() == "c-tf-idf") {
+        if (r$method == "c-tf-idf") {
           BertopicR::bt_outliers_ctfidf(
-            fitted_model = model(),
-            documents = df()$docs,
-            topics = clusters(), 
-            threshold = threshold())
-        } else if (method() == "embeddings") {
+            fitted_model = r$model,
+            documents = r$df$docs,
+            topics = r$clusters(), 
+            threshold = r$threshold)
+        } else if (r$method == "embeddings") {
           BertopicR::bt_outliers_embeddings(
-            fitted_model = model(),
-            documents = df()$docs,
-            topics = clusters(), 
-            embeddings = df()$embeddings,
+            fitted_model = r$model,
+            documents = r$df$docs,
+            topics = r$clusters(), 
+            embeddings = r$df$embeddings,
             embedding_model = embedder,
-            threshold = threshold())
-        } else if (method() == "tokenset similarity") {
+            threshold = r$threshold)
+        } else if (r$method == "tokenset similarity") {
           BertopicR::bt_outliers_tokenset_similarity(
-            fitted_model = model(),
-            documents = df()$docs,
-            topics = clusters(),
-            threshold = threshold())
+            fitted_model = r$model,
+            documents = r$df$docs,
+            topics = r$clusters(),
+            threshold = r$threshold)
         }
     })
     
@@ -83,7 +85,7 @@ outlierServer <- function(id, df, model, clusters, embedder){
     })
     
     output$outlier_display <- shiny::renderUI({
-      if(!is.null(model())){
+      if(!is.null(r$model)){
         plotly::plotlyOutput(ns("outlier_plot"))
       } else{
         shiny::tagList(
@@ -95,19 +97,19 @@ outlierServer <- function(id, df, model, clusters, embedder){
 
     # output$outlier_plot <- umapServer("umap_outliers", df = df, colour_var = new_topics)
     output$outlier_plot <- plotly::renderPlotly({
-      o <- createUmap("umap_outliers", df = df, colour_var = new_topics,
+      o <- createUmap("umap_outliers", df = r$df, colour_var = new_topics(),
                       title = "UMAP of document embeddings: Reassigning outliers")
       # plotly::event_register(o, "plotly_selected")
       # o
     })
     
     outlier_display_data <- shiny::reactive({
-      shiny::req(model())
+      shiny::req(r$model)
       selected <- plotly::event_data("plotly_selected", source = "umap_outliers")
-      df_outlier_temp <- df() %>% 
+      df_outlier_temp <- r$df %>% 
         dplyr::select(-c(embeddings, v1, v2)) %>%
         dplyr::mutate(new_topics = new_topics(),
-                      old_topcis = clusters())
+                      old_topcis = r$clusters())
       df_outlier_temp[df_outlier_temp$rowid %in% selected$customdata, ] %>% 
         dplyr::select(-rowid)
     })
@@ -128,11 +130,11 @@ outlierServer <- function(id, df, model, clusters, embedder){
     
     output$download_topic_model <- shiny::downloadHandler(
       filename = function() {
-        print(model())
+        print(r$model)
         paste0("topic_model", format(Sys.time(), "%d-%m-%Y_%H:%M:%S"), ".bt")
       },
       content = function(file) {
-        model()$save(file)
+        r$model$save(file)
       }
     )
     

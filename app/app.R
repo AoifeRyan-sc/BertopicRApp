@@ -4,6 +4,7 @@
 # is global.R which is automatically sourced.
 
 library(shiny)
+library(BertopicR)
 library(here)
 library(magrittr)
 
@@ -20,14 +21,9 @@ source(here("app/R/reducingAsync.R"))
 source(here("app/modules/upload.R"))
 source(here("app/modules/embed_reduce.R"))
 source(here("app/modules/reduce.R"))
-source(here("app/modules/modelling.R"))
 source(here("app/modules/modelExplore.R"))
 source(here("app/modules/clustering.R"))
 source(here("app/modules/outlier.R"))
-
-# source(here("app/modules/clustering_elements.R"))
-
-source(here("app/modules/clustering_panel_modules.R"))
 
 # Source App Files
 source(here("app/ui.R"))

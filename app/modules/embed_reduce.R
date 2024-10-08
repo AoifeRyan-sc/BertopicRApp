@@ -118,7 +118,6 @@ embedReduceServer <- function(id, r){
     })
     
     shiny::observe({
-      print(class(r$embeddings))
       buttons <- c("reducing_method", "n_neighbours", "n_components", "min_dist", "reducing_metric", "do_reducing")
       lapply(buttons, shinyjs::disable)
       # purrr::map(buttons, ~ shinyjs::disable(.x))
@@ -156,13 +155,15 @@ embedReduceServer <- function(id, r){
     }) 
     
     shiny::observe({
-      req(!is.null(reduced_embeddings))
-      r$reduced_embeddings <- reduced_embeddings$get_result()
+      # req(!is.null(reduced_embeddings))
+      # r$reduced_embeddings <- reduced_embeddings$get_result()
+      r$reduced_embeddings <- reduced_embeds
     })
     
     shiny::observe({
-      req(!is.null(reduced_embeddings2d))
-      r$reduced_embeddings2d<- reduced_embeddings2d$get_result()
+      r$reduced_embeddings2d <- df[c("v1", "v2")]
+      # req(!is.null(reduced_embeddings2d))
+      # r$reduced_embeddings2d<- reduced_embeddings2d$get_result()
     })
     
     output$reduce_status <- shiny::renderUI({
