@@ -101,28 +101,28 @@ embedReduceServer <- function(id, r){
     })
     
     output$embed_status <- shiny::renderUI({
-      if (r$embedding_happening == "happening"){
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reducing-embeddings",
-            span(class = "timer-emoji", "⏳"),
-            span(class = "reducing-text", "Calculating Embeddings")
-          ))
-      } else if (r$embedding_happening == "finished") {
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reduced-embeddings",
-            span(class = "check-emoji", "✅"),
-            span(class = "reducing-text", "Text Embedded!")
-          ))
-      } else{
-      }
+      progress_annimation(r$embedding_happening, r$embedding_happening, "Reduced", "Reducing in progress")
+      # if (r$embedding_happening == "happening"){
+      #   htmltools::tagList(
+      #     htmltools::tags$head(
+      #       tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      #     ),
+      #     htmltools::div(
+      #       class = "reducing-embeddings",
+      #       span(class = "timer-emoji", "⏳"),
+      #       span(class = "reducing-text", "Calculating Embeddings")
+      #     ))
+      # } else if (r$embedding_happening == "finished") {
+      #   htmltools::tagList(
+      #     htmltools::tags$head(
+      #       tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      #     ),
+      #     htmltools::div(
+      #       class = "reduced-embeddings",
+      #       span(class = "check-emoji", "✅"),
+      #       span(class = "reducing-text", "Text Embedded!")
+      #     ))
+      # }
     })
     
     # output$embed_progress_update <- shiny::renderUI({
@@ -144,15 +144,28 @@ embedReduceServer <- function(id, r){
       
     })
     
-    reduced_embeddings <- backgroundReduce(
-      id = "reduced_embeddings",
-      n_neighbours = input$n_neighbours,
-      n_components = input$n_components,
-      min_dist = input$min_dist,
-      metric = input$reducing_metric,
-      embeddings = r$df$embeddings,
-      wait_for_event = TRUE
-    ) # I think I want to change this to be a normal function
+    # reduced_embeddings <- backgroundReduce(
+    #   id = "reduced_embeddings",
+    #   n_neighbours = input$n_neighbours,
+    #   n_components = input$n_components,
+    #   min_dist = input$min_dist,
+    #   metric = input$reducing_metric,
+    #   embeddings = r$df$embeddings,
+    #   wait_for_event = TRUE
+    # ) # I think I want to change this to be a normal function
+    
+    shiny::observeEvent(input$do_reducing, {
+      r$reducing_happening <- "happening"
+      r$reducing_job <- callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
+        reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours, 
+                                                   n_components = n_components, 
+                                                   min_dist = min_dist, 
+                                                   metric = metric)
+        reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
+      },
+      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
+      supervise = TRUE)
+    }) 
     
     reduced_embeddings2d <- backgroundReduce(
       id = "reduced_embeddings2d",
@@ -165,14 +178,24 @@ embedReduceServer <- function(id, r){
     ) # I think I want to change this to be a normal function
     
     shiny::observeEvent(input$do_reducing, {
-      reduced_embeddings$start_job()
+      # reduced_embeddings$start_job()
       reduced_embeddings2d$start_job()
-    }) 
+    })
+    
+    # shiny::observe({
+    #   req(!is.null(reduced_embeddings))
+    #   r$reduced_embeddings <- reduced_embeddings$get_result()
+    #   # r$reduced_embeddings <- reduced_embeds
+    # })
     
     shiny::observe({
-      req(!is.null(reduced_embeddings))
-      r$reduced_embeddings <- reduced_embeddings$get_result()
-      # r$reduced_embeddings <- reduced_embeds
+      shiny::req(r$reducing_happening == "happening")
+      shiny::invalidateLater(250)
+      
+      if (r$reducing_job$is_alive() == FALSE){
+        r$reducing_happening = "finished"
+        r$reduced_embeddings <- r$reducing_job$get_result()
+      }
     })
     
     shiny::observe({
@@ -182,29 +205,52 @@ embedReduceServer <- function(id, r){
     })
     
     output$reduce_status <- shiny::renderUI({
+      progress_annimation(r$reducing_happening, r$reduced_embeddings, "Reduced", "Reducing in progress")
       
-      if (is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings)){
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reduced-embeddings",
-            span(class = "check-emoji", "✅"),
-            span(class = "reducing-text", "Reduced!")
-          ))
-      } else if (stringr::str_detect(reduced_embeddings$progress_message(),"Reducing in progress")){
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reducing-embeddings",
-            span(class = "timer-emoji", "⏳"),
-            span(class = "reducing-text", "Reducing Embeddings")
-          ))
-      } 
+      # if (r$reducing_happening == "happening"){
+      #   htmltools::tagList(
+      #     htmltools::tags$head(
+      #       tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      #     ),
+      #     htmltools::div(
+      #       class = "reducing-embeddings",
+      #       span(class = "timer-emoji", "⏳"),
+      #       span(class = "reducing-text", "Reducing Embeddings")
+      #     ))
+      # } else if (r$reducing_happening == "finished") {
+      #   htmltools::tagList(
+      #     htmltools::tags$head(
+      #       tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      #     ),
+      #     htmltools::div(
+      #       class = "reduced-embeddings",
+      #       span(class = "check-emoji", "✅"),
+      #       span(class = "reducing-text", "Embeddings Reduced!")
+      #     ))
+      # }
       
+      # if (is.array(r$reduced_embeddings) | is.data.frame(r$reduced_embeddings)){
+      #   htmltools::tagList(
+      #     htmltools::tags$head(
+      #       tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      #     ),
+      #     htmltools::div(
+      #       class = "reduced-embeddings",
+      #       span(class = "check-emoji", "✅"),
+      #       span(class = "reducing-text", "Reduced!")
+      #     ))
+      # } else if (stringr::str_detect(reduced_embeddings$progress_message(),"Reducing in progress")){
+      #   htmltools::tagList(
+      #     htmltools::tags$head(
+      #       tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      #     ),
+      #     htmltools::div(
+      #       class = "reducing-embeddings",
+      #       span(class = "timer-emoji", "⏳"),
+      #       span(class = "reducing-text", "Reducing Embeddings")
+      #     ))
+      # } 
+      # 
     })
     
     output$reduce2d_status <- shiny::renderUI({
@@ -233,4 +279,29 @@ embedReduceServer <- function(id, r){
       
     })
   })
+}
+
+
+progress_annimation <- function(processing_value_check, complete_value_check, processing_text, complete_text){
+  if (complete_value_check == "happening"){
+    htmltools::tagList(
+      htmltools::tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      ),
+      htmltools::div(
+        class = "reducing-embeddings",
+        span(class = "timer-emoji", "⏳"),
+        span(class = "reducing-text", processing_text)
+      ))
+  } else if (processing_value_check == "finished") {
+    htmltools::tagList(
+      htmltools::tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      ),
+      htmltools::div(
+        class = "reduced-embeddings",
+        span(class = "check-emoji", "✅"),
+        span(class = "reducing-text", complete_text)
+      ))
+  }
 }

@@ -5,6 +5,7 @@ server <- function(input, output, session) {
   r <- shiny::reactiveValues(model = NULL,
                              reduced_embeddings = NULL,
                              embedding_happening = FALSE,
+                             reducing_happening = FALSE,
                              clusters = NULL)
   
   # reducingServer("reducing_panel", df = df)

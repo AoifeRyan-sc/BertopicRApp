@@ -12,3 +12,5 @@ source("modules/outlier.R")
 
 source("R/helper_functions.R")
 source("R/reducingAsync.R")
+
+source("www/styles.css")
