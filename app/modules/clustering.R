@@ -24,8 +24,14 @@ shiny::tagList(
                            min = 2, max = 20, value = 20, round = TRUE
                            # step = ceiling((20 - 2)/5)
         ), # arbitrarily setting the defaults
+        # shiny::numericInput(ns("numeric_input_min_cluster_size"), label = "",
+        #                     min = 2, max = 20, value = 20),
+        # shiny::br(),
         shiny::sliderInput(ns("min_sample_size"), "Minimum number of samples:",
-                           min = 1, max = 10, value = 1), # these values update as defined in the server
+                           min = 1, max = 20, value = 20), # these values update as defined in the server
+        # shiny::numericInput(ns("numeric_input_min_sample_size"), label = "",
+        #                     min = 1, max = 20, value = 20),
+        # shiny::br(),
         shiny::selectInput(ns("hdbscan_metric"), "Clustering Metric", choices = c(
           # "cosine", - Not supported by sklearn
           "euclidean", "braycurtis", "canberra", "chebyshev", "cityblock", "correlation",  "dice", "hamming", "jaccard", "jensenshannon", "kulczynski1", "mahalanobis", "matching", "minkowski", "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener", "sokalsneath", "sqeuclidean", "yule")),
@@ -65,12 +71,13 @@ clusteringServer <- function(id, r){
       r$num_clusters <- input$n_clusters
       r$select_method <- input$hdbscan_cluster_selection
       r$hdb_metric <- input$hdbscan_metric
+      r$cluster_model <- input$cluster_method
     })
     
     clusterer <- shiny::reactive({
-      if (input$cluster_method == "HDBSCAN"){
+      if (r$cluster_model == "HDBSCAN"){
         BertopicR::bt_make_clusterer_hdbscan(min_cluster_size = r$min_cluster, min_samples = r$min_samples, cluster_selection_method = r$select_method, metric = r$hdb_metric)
-      } else if (input$cluster_method == "K-Means"){
+      } else if (r$cluster_model == "K-Means"){
         BertopicR::bt_make_clusterer_kmeans(n_clusters = r$num_clusters)
       }
     })
@@ -118,9 +125,7 @@ clusteringServer <- function(id, r){
     })
     
     output$data_download_clustering <- shiny::downloadHandler(
-      filename = function() {
-        paste0("clustering_data_", format(Sys.time(), "%d-%m-%Y_%H:%M:%S"), ".csv")
-      },
+      filename = title_file("clustering_data", ".csv"),
       content = function(file) {
         utils::write.csv(display_data(), file, row.names = FALSE)
       }
@@ -129,6 +134,7 @@ clusteringServer <- function(id, r){
         shiny::observeEvent(r$min_cluster, { 
           shiny::updateSliderInput(inputId = "min_sample_size", max = r$min_cluster, value = r$min_cluster)
         }) # updating slider range
+      
 
         shiny::observeEvent(r$df, {
           max_val <- ceiling(nrow(r$df)/2)
@@ -151,19 +157,16 @@ clusteringServer <- function(id, r){
     shiny::observeEvent(input$reset_model, {
       r$model <- NULL
     }) # remove model on reset
-
+    
+    elements_to_turn_on_off <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clusters",
+                             "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
+    
     shiny::observeEvent(input$do_modelling, {
-      elements_to_disable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clusters",
-                               "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
-
-      purrr::map(elements_to_disable, ~ shinyjs::disable(.x))
+      purrr::map(elements_to_turn_on_off, ~ shinyjs::disable(.x))
     }) # disable buttons
 
     shiny::observeEvent(input$reset_model, {
-      elements_to_enable <- c("do_modelling", "min_cluster_size", "min_sample_size", "n_clustsers",
-                              "hdbscan_metric", "hdbscan_cluster_selection", "cluster_method")
-
-      purrr::map(elements_to_enable, ~ shinyjs::enable(.x))
+      purrr::map(elements_to_turn_on_off, ~ shinyjs::enable(.x))
     }) # enable buttons on reset
 
     output$complete_message <- shiny::renderUI({
@@ -178,11 +181,6 @@ clusteringServer <- function(id, r){
             span(class = "reducing-text", "Text Embedded!")
           ))
       } 
-    })
-
-
-    r$cluster_model <- shiny::reactive({
-      input$cluster_method
     })
 
 

@@ -12,25 +12,21 @@ outlierUi <- function(id) {
     shiny::sidebarPanel(
       shiny::selectInput(ns("outlier_method"), "Outlier Reduction Method", 
                   choices = c("c-tf-idf",
-                              # "embeddings",
+                              "embeddings",
                               "tokenset similarity")),
       shiny::sliderInput(ns("outlier_threshold"),
                   "Threshold:",
                   min = 0,
                   max = 1,
                   value = 0.3),
-      shiny::conditionalPanel(
-        condition = "input.outlier_method == 'embeddings'", ns = ns,
-        shiny::fileInput("embedder_input", "Embedder used for document embeddings",
-                         accept = )
-      )
     ),
     shiny::mainPanel(
       shiny::uiOutput(ns("outlier_display")),
       DT::dataTableOutput(ns("selected_outlier_data_df")),
       shiny::downloadButton(ns("data_download_outliers"), label = "Download Data Table"),
       shiny::downloadButton(ns("download_topic_model"), label = "Download Topic Model"),
-      shiny::textOutput(ns("download_note"))
+      shiny::br(),
+      shiny::htmlOutput(ns("download_note"))
     )
   )
 }
@@ -69,7 +65,7 @@ outlierServer <- function(id, r){
             documents = r$df$docs,
             topics = r$clusters(), 
             embeddings = r$df$embeddings,
-            embedding_model = embedder,
+            embedding_model = r$embedder,
             threshold = r$threshold)
         } else if (r$method == "tokenset similarity") {
           BertopicR::bt_outliers_tokenset_similarity(
@@ -95,12 +91,10 @@ outlierServer <- function(id, r){
       }
     })
 
-    # output$outlier_plot <- umapServer("umap_outliers", df = df, colour_var = new_topics)
     output$outlier_plot <- plotly::renderPlotly({
       o <- createUmap("umap_outliers", df = r$df, colour_var = new_topics(),
                       title = "UMAP of document embeddings: Reassigning outliers")
-      # plotly::event_register(o, "plotly_selected")
-      # o
+
     })
     
     outlier_display_data <- shiny::reactive({
@@ -138,8 +132,8 @@ outlierServer <- function(id, r){
       }
     )
     
-    output$download_note <- shiny::renderText({
-      "<i>Note that when retrieving a Bertopic model in your rstudio later, you must access the filepath relative to your wd, you cannot retrieve it relative to the home directory using a '~'.</i>"
+    output$download_note <- shiny::renderUI({
+      shiny::HTML("<i>Note that when retrieving a Bertopic model in your rstudio later, you must access the filepath relative to your wd, you cannot retrieve it relative to the home directory using a '~'.</i>")
     })
     
 

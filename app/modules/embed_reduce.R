@@ -51,7 +51,8 @@ embedReduceUi <- function(id){
     shiny::mainPanel(
       shiny::fluidRow(
         bslib::card(
-          shiny::uiOutput(ns("embed_status"))
+          shiny::uiOutput(ns("embed_status")),
+          shiny::uiOutput(ns("embed_progress_update"))
         ),
         bslib::card(
           shiny::uiOutput(ns("reduce_status"))
@@ -72,12 +73,20 @@ embedReduceServer <- function(id, r){
     
     shiny::observeEvent(input$embed_button, {
       r$embedding_happening <- "happening"
+      r$embedder <- BertopicR::bt_make_embedder_st("all-MiniLM-L6-v2") # want to be able to reference this again but can't pass between sessions
       r$embedding_job <- callr::r_bg(function(docs, embedding_model){
         embedder <- BertopicR::bt_make_embedder_st("all-MiniLM-L6-v2")
         embeddings <- BertopicR::bt_do_embedding(embedder, docs, accelerator = "mps") # what happens if user doesn't have mps?
       },
       args = list(docs = r$df$docs, embedding_model = "all-MiniLM-L6-v2"),
       supervise = TRUE)
+      
+      # r$embedding_job <- callr::r_bg(function(docs, embedder){
+      #   # embedder <- BertopicR::bt_make_embedder_st("all-MiniLM-L6-v2")
+      #   embeddings <- BertopicR::bt_do_embedding(embedder, docs, accelerator = "mps") # what happens if user doesn't have mps?
+      # },
+      # args = list(docs = r$df$docs, embedder = r$embedder),
+      # supervise = TRUE)
 
     }) 
     
@@ -113,18 +122,24 @@ embedReduceServer <- function(id, r){
             span(class = "reducing-text", "Text Embedded!")
           ))
       } else{
-        # htmltools::div()
       }
     })
+    
+    # output$embed_progress_update <- shiny::renderUI({
+    #   req(r$embedding_happening == "happening")
+    #   invalidateLater(250)
+    #   
+    #   embed_job_output <- r$embedding_job$read_error()
+    #   embed_job_output <- gsub("\r", "\n", embed_job_output)
+    #   shiny::htmlOutput(embed_job_output)
+    # })
     
     shiny::observe({
       buttons <- c("reducing_method", "n_neighbours", "n_components", "min_dist", "reducing_metric", "do_reducing")
       lapply(buttons, shinyjs::disable)
-      # purrr::map(buttons, ~ shinyjs::disable(.x))
-      
+
       if (is.array(r$embeddings) | is.data.frame(r$embeddings)){
         lapply(buttons, shinyjs::enable)
-        # purrr::map(buttons, ~ shinyjs::enable(.x))
       }
       
     })
@@ -155,15 +170,15 @@ embedReduceServer <- function(id, r){
     }) 
     
     shiny::observe({
-      # req(!is.null(reduced_embeddings))
-      # r$reduced_embeddings <- reduced_embeddings$get_result()
-      r$reduced_embeddings <- reduced_embeds
+      req(!is.null(reduced_embeddings))
+      r$reduced_embeddings <- reduced_embeddings$get_result()
+      # r$reduced_embeddings <- reduced_embeds
     })
     
     shiny::observe({
-      r$reduced_embeddings2d <- df[c("v1", "v2")]
-      # req(!is.null(reduced_embeddings2d))
-      # r$reduced_embeddings2d<- reduced_embeddings2d$get_result()
+      # r$reduced_embeddings2d <- df[c("v1", "v2")]
+      req(!is.null(reduced_embeddings2d))
+      r$reduced_embeddings2d<- reduced_embeddings2d$get_result()
     })
     
     output$reduce_status <- shiny::renderUI({
@@ -188,7 +203,7 @@ embedReduceServer <- function(id, r){
             span(class = "timer-emoji", "⏳"),
             span(class = "reducing-text", "Reducing Embeddings")
           ))
-      } else {}
+      } 
       
     })
     

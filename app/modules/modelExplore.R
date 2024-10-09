@@ -83,21 +83,15 @@ modelExploreServer <- function(id, r){
     
     shiny::observe({
       shiny::req(input$topic_summary_rows_selected)
-      selected_topic <- input$topic_summary_rows_selected - 2
+      if (r$cluster_model == "HDBSCAN"){
+        selected_topic <- input$topic_summary_rows_selected - 2
+      } else{
+        selected_topic <- input$topic_summary_rows_selected
+      }
+      
       print(selected_topic)
       r$df_selected_topic <- r$df[r$df$topics %in% as.list(selected_topic), ]
     })
-    
-    # selected_cluster <- shiny::reactive({
-    #   shiny::req(input$topic_summary_rows_selected)
-    #    input$topic_summary_rows_selected - 2
-    # }) # topic selected in topic summary table
-    
-    # df_explore_model <- shiny::reactive({
-    #   r$df %>%
-    #   dplyr::mutate(topic = r$model$topics_) %>%
-    #   dplyr::filter(topic %in% as.list(selected_cluster()))
-    # })
     
     output$doc_breakdown_display <- shiny::renderUI({
       if(!is.null(r$model)){

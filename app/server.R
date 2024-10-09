@@ -19,7 +19,7 @@ server <- function(input, output, session) {
   # })
   # 
   shiny::observe({
-    if(!is.null(r$model) && r$cluster_model() == "K-Means"){
+    if(!is.null(r$model) && r$cluster_model == "K-Means"){
       shiny::hideTab(inputId = "main_navpage", target = "Outlier Manipulation")
     }
   })
