@@ -179,7 +179,7 @@ calculate_wlos_app <- function(df, topic_var, text_var = Message, top_n = 30, fi
   
   # Add a horizontal line at y=0 with custom styling
   return(list("viz" = viz, "view" = wlos))
-}
+  }
 
 #' UMAP Ui Server Function
 #'
@@ -248,6 +248,35 @@ title_file <- function(file_name, format) {
   return(paste0(file_name, "_", format(Sys.time(), "%d-%m-%Y"), format))
 }
 
+
+
+progress_annimation <- function(processing_value_check, complete_value_check, processing_text, complete_text){
+  if (complete_value_check == "happening"){
+    return(
+      htmltools::tagList(
+      htmltools::tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+      ),
+      htmltools::div(
+        class = "reducing-embeddings",
+        span(class = "timer-emoji", "⏳"),
+        span(class = "reducing-text", processing_text)
+      ))
+    )
+  } else if (processing_value_check == "finished") {
+    return(
+      htmltools::tagList(
+        htmltools::tags$head(
+          tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+        ),
+        htmltools::div(
+          class = "reduced-embeddings",
+          span(class = "check-emoji", "✅"),
+          span(class = "reducing-text", complete_text)
+        ))
+    )
+  }
+}
 
 
 

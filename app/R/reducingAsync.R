@@ -31,11 +31,8 @@ backgroundReduce <- function(id,
       if (stringr::str_detect(error, "Epochs completed")){
         progress_regex <- "Epochs completed:(.*?)\\]"
         progress_message <- paste(stringr::str_extract_all(error, progress_regex)[[1]], collapse = "\n")
-        message(progress_message)
-      } else { 
-        progress_message <- "Reducing in progress"
-        message(progress_message)
-        }
+        # message(progress_message)
+      } 
       
       alive <- bg_job()$is_alive()
       if (isFALSE(alive)) {

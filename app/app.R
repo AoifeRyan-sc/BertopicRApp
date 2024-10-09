@@ -33,4 +33,4 @@ if(interactive()){
   shinyApp(ui, server)
 } else {
   shiny::runApp(here::here("app"))
-}
+  }
