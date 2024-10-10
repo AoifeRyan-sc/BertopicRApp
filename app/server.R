@@ -6,6 +6,10 @@ server <- function(input, output, session) {
                              reduced_embeddings = NULL,
                              embedding_happening = FALSE,
                              reducing_happening = FALSE,
+                             reducing2d_happening = FALSE,
+                             reducing_messages = NULL,
+                             reducing2d_messages = NULL,
+                             embedding_messages = NULL,
                              clusters = NULL)
   
   # reducingServer("reducing_panel", df = df)

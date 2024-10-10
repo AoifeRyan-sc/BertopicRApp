@@ -278,7 +278,15 @@ progress_annimation <- function(processing_value_check, complete_value_check, pr
   }
 }
 
-
-
-
-
+progress_extract <- function(message_reactive){
+  if (!is.null(message_reactive)) {
+    shiny::div({
+      if (stringr::str_detect(message_reactive, "Epochs completed")) {
+        progress_regex <- "Epochs completed:(.*?)\\]"
+        extracted_messages <- stringr::str_extract_all(message_reactive, progress_regex)[[1]]
+        
+        return(htmltools::div(paste(extracted_messages, collapse = "\n")))
+      }
+    })
+  }
+}

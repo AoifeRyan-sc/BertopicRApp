@@ -58,6 +58,9 @@ embedReduceUi <- function(id){
           shiny::uiOutput(ns("reduce_status"))
         ),
         bslib::card(
+          shiny::uiOutput(ns("reduce_progress"))
+        ),
+        bslib::card(
           shiny::uiOutput(ns("reduce2d_status"))
         )
       )
@@ -70,6 +73,8 @@ embedReduceServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session) {
     
     ns <- session$ns
+    
+    # embedding ----
     
     shiny::observeEvent(input$embed_button, {
       r$embedding_happening <- "happening"
@@ -87,13 +92,14 @@ embedReduceServer <- function(id, r){
       # },
       # args = list(docs = r$df$docs, embedder = r$embedder),
       # supervise = TRUE)
-
+      
     }) 
     
     shiny::observe({
       shiny::req(r$embedding_happening == "happening")
       shiny::invalidateLater(250)
-
+      r$embedding_messages <- r$embedding_job$read_error()
+      
       if (r$embedding_job$is_alive() == FALSE){
         r$embedding_happening = "finished"
         r$embeddings <- r$embedding_job$get_result()
@@ -101,22 +107,19 @@ embedReduceServer <- function(id, r){
     })
     
     output$embed_status <- shiny::renderUI({
-      progress_annimation(r$embedding_happening, r$embedding_happening, "Embedding in progress", "Embedded!")
+      embedding_progress_annimation <- progress_annimation(r$embedding_happening, r$embedding_happening, "Embedding in progress", "Embedded!")
+      embedding_messages_div <- progress_extract(r$embedding_messages)
+      
+      shiny::div(embedding_progress_annimation, embedding_messages_div)
+      
     })
     
-    # output$embed_progress_update <- shiny::renderUI({
-    #   req(r$embedding_happening == "happening")
-    #   invalidateLater(250)
-    #   
-    #   embed_job_output <- r$embedding_job$read_error()
-    #   embed_job_output <- gsub("\r", "\n", embed_job_output)
-    #   shiny::htmlOutput(embed_job_output)
-    # })
+    # Reducing for clustering ----
     
     shiny::observe({
       buttons <- c("reducing_method", "n_neighbours", "n_components", "min_dist", "reducing_metric", "do_reducing")
       lapply(buttons, shinyjs::disable)
-
+      
       if (is.array(r$embeddings) | is.data.frame(r$embeddings)){
         lapply(buttons, shinyjs::enable)
       }
@@ -136,95 +139,112 @@ embedReduceServer <- function(id, r){
       supervise = TRUE)
     }) 
     
-    shiny::observeEvent(input$do_reducing, {
-      r$reducing_happening <- "happening"
-      r$reducing_job <- callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
-        reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours,
-                                                   n_components = n_components,
-                                                   min_dist = min_dist,
-                                                   metric = metric)
-        reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
-      },
-      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
-      supervise = TRUE)
-    }) 
-    
-    reduced_embeddings2d <- backgroundReduce(
-      id = "reduced_embeddings2d",
-      n_neighbours = input$n_neighbours,
-      n_components = 2,
-      min_dist = input$min_dist,
-      metric = input$reducing_metric,
-      embeddings = r$df$embeddings,
-      wait_for_event = TRUE
-    ) # I think I want to change this to be a normal function
-    
-    shiny::observeEvent(input$do_reducing, {
-      # reduced_embeddings$start_job()
-      reduced_embeddings2d$start_job()
-    })
-    
-    # shiny::observe({
-    #   req(!is.null(reduced_embeddings))
-    #   r$reduced_embeddings <- reduced_embeddings$get_result()
-    #   # r$reduced_embeddings <- reduced_embeds
-    # })
-    
     shiny::observe({
       shiny::req(r$reducing_happening == "happening")
       shiny::invalidateLater(250)
-      # print(r$reducing_job$read_error())
+      
+      r$reducing_messages <- r$reducing_job$read_error()
       
       if (r$reducing_job$is_alive() == FALSE){
         r$reducing_happening = "finished"
         r$reduced_embeddings <- r$reducing_job$get_result()
+        # r$reduced_embeddings <- reduced_embeds
       }
     })
     
-    shiny::observe({
-      # r$reduced_embeddings2d <- df[c("v1", "v2")]
-    #   req(!is.null(reduced_embeddings2d))
-      r$reduced_embeddings2d<- reduced_embeddings2d$get_result()
-    })
-    # 
     output$reduce_status <- shiny::renderUI({
       
-      progress_annimation(r$reducing_happening, r$reducing_happening, "Reducing in progress", "Reduced")
+      reducing_animation_div <- progress_annimation(r$reducing_happening, r$reducing_happening, "Reducing in progress", "Reduced!") 
+      messages_div <- progress_extract(r$reducing_messages)
       
-      # req(!is.null(r$reducing_job))
-      # message(r$reducing_job$read_error())
-      # error <- r$reducing_job$read_error()
-      # if (stringr::str_detect(error, "Epochs completed")){
-      #   progress_regex <- "Epochs completed:(.*?)\\]"
-      #   htmltools::div(paste(stringr::str_extract_all(error, progress_regex)[[1]], collapse = "\n"))
-      # }
+      shiny::div(reducing_animation_div, messages_div)
+      
+    })
+    
+    # Reducing to 2D ----
+    
+    shiny::observeEvent(input$do_reducing, {
+      r$reducing2d_happening <- "happening"
+      r$reducing2d_job <- callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
+        reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours, 
+                                                   n_components = n_components, 
+                                                   min_dist = min_dist, 
+                                                   metric = metric)
+        reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
+      },
+      args = list(n_neighbours = input$n_neighbours, n_components = 2, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
+      supervise = TRUE)
+    }) 
+    
+    shiny::observe({
+      shiny::req(r$reducing2d_happening == "happening")
+      shiny::invalidateLater(250)
+      
+      r$reducing2d_messages <- r$reducing2d_job$read_error()
+      
+      if (r$reducing2d_job$is_alive() == FALSE){
+        r$reducing2d_happening = "finished"
+        r$reduced_embeddings2d <- r$reducing2d_job$get_result()
+        # r$reduced_embeddings <- reduced_embeds
+      }
     })
     
     output$reduce2d_status <- shiny::renderUI({
-
-      if (is.array(r$reduced_embeddings2d) | is.data.frame(r$reduced_embeddings2d)){
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reduced-embeddings",
-            span(class = "check-emoji", "✅"),
-            span(class = "reducing-text", "Reduced to 2D!")
-          ))
-      } else if (stringr::str_detect(reduced_embeddings2d$progress_message(),"Reducing in progress")){
-        htmltools::tagList(
-          htmltools::tags$head(
-            tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-          ),
-          htmltools::div(
-            class = "reducing-embeddings",
-            span(class = "timer-emoji", "⏳"),
-            span(class = "reducing-text", "Reducing Embeddings to 2D")
-          ))
-      } else {}
+      
+      reducing2d_animation_div <- progress_annimation(r$reducing2d_happening, r$reducing2d_happening, "Reducing to 2D in progress", "Reduced to 2D!") 
+      messages2d_div <- progress_extract(r$reducing2d_messages)
+      
+      shiny::div(reducing2d_animation_div, messages2d_div)
       
     })
+    
+    # reduced_embeddings2d <- backgroundReduce(
+    #   id = "reduced_embeddings2d",
+    #   n_neighbours = input$n_neighbours,
+    #   n_components = 2,
+    #   min_dist = input$min_dist,
+    #   metric = input$reducing_metric,
+    #   embeddings = r$df$embeddings,
+    #   wait_for_event = TRUE
+    # ) # I think I want to change this to be a normal function
+    # 
+    # shiny::observeEvent(input$do_reducing, {
+    #   # reduced_embeddings$start_job()
+    #   reduced_embeddings2d$start_job()
+    # })
+    # 
+    # shiny::observe({
+    #   # r$reduced_embeddings2d <- df[c("v1", "v2")]
+    # #   req(!is.null(reduced_embeddings2d))
+    #   r$reduced_embeddings2d<- reduced_embeddings2d$get_result()
+    # })
+    # 
+    # output$reduce2d_status <- shiny::renderUI({
+    # 
+    #   if (is.array(r$reduced_embeddings2d) | is.data.frame(r$reduced_embeddings2d)){
+    #     htmltools::tagList(
+    #       htmltools::tags$head(
+    #         tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+    #       ),
+    #       htmltools::div(
+    #         class = "reduced-embeddings",
+    #         span(class = "check-emoji", "✅"),
+    #         span(class = "reducing-text", "Reduced to 2D!")
+    #       ))
+    #   } else if (stringr::str_detect(reduced_embeddings2d$progress_message(),"Reducing in progress")){
+    #     htmltools::tagList(
+    #       htmltools::tags$head(
+    #         tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+    #       ),
+    #       htmltools::div(
+    #         class = "reducing-embeddings",
+    #         span(class = "timer-emoji", "⏳"),
+    #         span(class = "reducing-text", "Reducing Embeddings to 2D")
+    #       ))
+    #   } 
+    # })
+    
+    # ----
   })
 }
 
