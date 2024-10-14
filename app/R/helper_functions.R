@@ -221,9 +221,11 @@ createUmap <- function(source_id, df = df, colour_var, title){
                                 linewidth = 1),
                    yaxis = list(title = "V2",
                                 showline = FALSE,
-                                linecolor = "grey80",
-                                mirror = TRUE,
-                                linewidth = 1), # can remove all of this if not showing line
+                                zeroline = FALSE
+                                # linecolor = "grey80",
+                                # mirror = TRUE,
+                                # linewidth = 1
+                   ), # can remove all of this if not showing line
                    showlegend = TRUE,
                    legend = list(title = "Topics")) %>%
     plotly::config(

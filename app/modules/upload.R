@@ -14,13 +14,10 @@ uploadUi <- function(id) {
         ns("data_upload"), "Upload your data",
         accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
       shiny::uiOutput(ns("data_upload_error_message")),
-      # shiny::actionButton(ns("embed_button"), label = shiny::HTML("<strong>Embed</strong>"), class = "btn-succes", 
-                          # width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
-      shiny::uiOutput(ns("embed_status"))
+      shiny::textInput(ns("text_col"), "Text Column:", placeholder = "message"),
     ),
     shiny::mainPanel(
       DT::dataTableOutput((ns("uploaded_data"))),
-      # shiny::downloadButton(ns("data_download_clustering"), label = "Download Data Table")
     )
   )
 
