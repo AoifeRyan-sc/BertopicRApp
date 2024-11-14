@@ -1,4 +1,9 @@
 # This assumes we're in a deployed environment, so we'll use file paths that start at app/
+# if (!requireNamespace("yourPackage", quietly = TRUE)) {
+#   remotes::install_github("AoifeRyan-sc/BertopicR@updates-20nov")
+# }
+
+library(BertopicR)
 library(shiny)
 library(here)
 library(magrittr)
