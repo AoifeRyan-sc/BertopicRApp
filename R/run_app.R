@@ -9,7 +9,9 @@ library(BertopicR)
 run_app <- function(){
   # this is a slow download if left to the middle of the app 
   # so best to just do it at the start
+  message("Downloading embedder")
   embedder <- BertopicR::bt_make_embedder_st("all-miniLM-L6-v2")
+  message("embedder downloaded")
   
   appDir <- system.file("app", package = "BertopicRApp")
   message("app directory: ", appDir)
