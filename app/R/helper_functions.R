@@ -93,8 +93,7 @@ embed_docs <- function(doc, embedding_model = "all-MiniLM-L6-v2") {
 #' @param nrow The number of rows the plots should be displayed with.
 #'
 #' @return A list containing a table with weighted log-odds calculated for each word in each group, and a visualisation
-#' 
-#' @export
+#'
 calculate_wlos_app <- function(df, topic_var, text_var = Message, top_n = 30, filter_by = c("association", "frequency"), top_terms_cutoff = 500, nrow = 4) {
   # Error handling ----
   if (!tibble::is_tibble(df) && !is.data.frame(df)) {
