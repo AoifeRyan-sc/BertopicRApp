@@ -8,6 +8,7 @@ library(BertopicR)
 #'
 run_app <- function(){
   appDir <- system.file("app", package = "BertopicRApp")
+  message("app directory: ", appDir)
   shiny::runApp(appDir, display.mode = "normal")
   # shiny::shinyApp(ui, server)
 }
