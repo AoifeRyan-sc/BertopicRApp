@@ -173,6 +173,7 @@ modelExploreServer <- function(id, r){
     output$representation_display <- shiny::renderUI({
       if(!is.null(r$model)){
         shiny::tagList(
+          shiny::h4("Section not yet implemented"),
           # shiny::br(),
           # plotly::plotOutput(ns("representaion"))
           shiny::br()

@@ -178,7 +178,7 @@ clusteringServer <- function(id, r){
           htmltools::div(
             class = "reduced-embeddings",
             span(class = "check-emoji", "✅"),
-            span(class = "reducing-text", "Text Embedded!")
+            span(class = "reducing-text", "Modelling Complete!")
           ))
       } 
     })

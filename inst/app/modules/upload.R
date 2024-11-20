@@ -15,6 +15,7 @@ uploadUi <- function(id) {
         accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
       shiny::uiOutput(ns("data_upload_error_message")),
       shiny::textInput(ns("text_col"), "Text Column:", placeholder = "message"),
+      shiny::actionButton(ns("submit_col_name"), "Submit")
     ),
     shiny::mainPanel(
       DT::dataTableOutput((ns("uploaded_data"))),
@@ -29,7 +30,7 @@ uploadServer <- function(id, r){
     
     # r$df <- shiny::reactive({
     shiny::observe({
-      shiny::req(input$data_upload)
+      shiny::req(input$data_upload, input$submit_col_name)
       
       ext <- tools::file_ext(input$data_upload$name)
       r$df <- switch(ext,
@@ -38,28 +39,28 @@ uploadServer <- function(id, r){
                      xlsx = readxl::read_xlsx(input$data_upload$datapath),
                      rds = readRDS(input$data_upload$datapath),
       ) %>%
-        dplyr::mutate(rowid = dplyr::row_number(), .before = 1)
-      
+        dplyr::mutate(rowid = dplyr::row_number(), .before = 1)  %>%
+        dplyr::rename(docs = input$text_col)
     })
     
-    output$data_upload_error_message <- shiny::renderUI({
-      req(input$data_upload)
-      
-      required_cols <- c("docs")
-      # , "embeddings", "v1", "v2")  # Add your required column names here
-      missing_cols <- setdiff(required_cols, colnames(r$df))
-      
-      if (length(missing_cols) > 0) {
-        shiny::tagList(
-          shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
-        )
-      } 
-      # else if (!c("v1", "v2") %in% colnames(r$df)){
-      #   shiny::tagList(
-      #     shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
-      #   )
-      # } # I think maybe we don't need this
-    })
+    # output$data_upload_error_message <- shiny::renderUI({
+    #   req(input$data_upload)
+    # 
+    #   required_cols <- c("docs")
+    #   # , "embeddings", "v1", "v2")  # Add your required column names here
+    #   missing_cols <- setdiff(required_cols, colnames(r$df))
+    # 
+    #   if (length(missing_cols) > 0) {
+    #     shiny::tagList(
+    #       shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
+    #     )
+    #   }
+    #   # else if (!c("v1", "v2") %in% colnames(r$df)){
+    #   #   shiny::tagList(
+    #   #     shiny::p(shiny::HTML(paste("<b>Error:</b> Required columns missing from data:", paste(missing_cols, collapse = ", "))))
+    #   #   )
+    #   # } # I think maybe we don't need this
+    # })
     
     # shiny::observeEvent(input$data_upload, {
     #   shinyjs::reset("reduced_embeddings_upload")
@@ -68,8 +69,7 @@ uploadServer <- function(id, r){
     
     output$uploaded_data <- DT::renderDataTable({
       req(is.data.frame(r$df))
-      printdf <- r$df %>% dplyr::select(-embeddings)
-      printdf
+      r$df 
     })
     
   
