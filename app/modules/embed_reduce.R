@@ -127,6 +127,7 @@ embedReduceServer <- function(id, r){
     })
     
     shiny::observeEvent(input$do_reducing, {
+      req(is.array(r$embeddings) | is.data.frame(r$embeddings))
       r$reducing_happening <- "happening"
       r$reducing_job <- callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
         reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours, 
@@ -135,7 +136,7 @@ embedReduceServer <- function(id, r){
                                                    metric = metric)
         reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
       },
-      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
+      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$embeddings),
       supervise = TRUE)
     }) 
     
@@ -172,7 +173,7 @@ embedReduceServer <- function(id, r){
                                                    metric = metric)
         reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
       },
-      args = list(n_neighbours = input$n_neighbours, n_components = 2, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
+      args = list(n_neighbours = input$n_neighbours, n_components = 2, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$embeddings),
       supervise = TRUE)
     }) 
     
