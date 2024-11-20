@@ -102,7 +102,7 @@ embedReduceServer <- function(id, r){
       
       if (r$embedding_job$is_alive() == FALSE){
         r$embedding_happening = "finished"
-        r$embeddings <- r$embedding_job$get_result()
+        r$df$embeddings <- r$embedding_job$get_result()
       }
     })
     
@@ -120,14 +120,14 @@ embedReduceServer <- function(id, r){
       buttons <- c("reducing_method", "n_neighbours", "n_components", "min_dist", "reducing_metric", "do_reducing")
       lapply(buttons, shinyjs::disable)
       
-      if (is.array(r$embeddings) | is.data.frame(r$embeddings)){
+      if (is.array(r$df$embeddings) | is.data.frame(r$df$embeddings)){
         lapply(buttons, shinyjs::enable)
       }
       
     })
     
     shiny::observeEvent(input$do_reducing, {
-      req(is.array(r$embeddings) | is.data.frame(r$embeddings))
+      req(is.array(r$df$embeddings) | is.data.frame(r$df$embeddings))
       r$reducing_happening <- "happening"
       r$reducing_job <- callr::r_bg(function(n_neighbours, n_components, min_dist, metric, embeddings){
         reducer <- BertopicR::bt_make_reducer_umap(n_neighbours = n_neighbours, 
@@ -136,7 +136,7 @@ embedReduceServer <- function(id, r){
                                                    metric = metric)
         reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
       },
-      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$embeddings),
+      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
       supervise = TRUE)
     }) 
     
@@ -173,7 +173,7 @@ embedReduceServer <- function(id, r){
                                                    metric = metric)
         reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
       },
-      args = list(n_neighbours = input$n_neighbours, n_components = 2, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$embeddings),
+      args = list(n_neighbours = input$n_neighbours, n_components = 2, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
       supervise = TRUE)
     }) 
     
