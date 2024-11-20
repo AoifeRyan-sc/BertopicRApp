@@ -14,19 +14,19 @@ options(shiny.port = 7775)
 options(shiny.host = "127.0.0.1")
 
 # Source Business logic/helper functions
-source(here("app/R/helper_functions.R"))
-source(here("app/R/reducingAsync.R"))
+source(here("inst/R/helper_functions.R"))
+source(here("inst/R/reducingAsync.R"))
 
-source(here("app/modules/upload.R"))
-source(here("app/modules/embed_reduce.R"))
-source(here("app/modules/reduce.R"))
-source(here("app/modules/modelExplore.R"))
-source(here("app/modules/clustering.R"))
-source(here("app/modules/outlier.R"))
+source(here("inst/modules/upload.R"))
+source(here("inst/modules/embed_reduce.R"))
+source(here("inst/modules/reduce.R"))
+source(here("inst/modules/modelExplore.R"))
+source(here("inst/modules/clustering.R"))
+source(here("inst/modules/outlier.R"))
 
 # Source App Files
-source(here("app/ui.R"))
-source(here("app/server.R"))
+source(here("inst/ui.R"))
+source(here("inst/server.R"))
 
 # Run an app the IDE way if in an interactive session, else run it the terminal/deployment way:
 if(interactive()){
