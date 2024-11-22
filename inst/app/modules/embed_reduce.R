@@ -4,13 +4,36 @@ embedReduceUi <- function(id){
   
   shiny::sidebarLayout(
     shiny::sidebarPanel(
-      htmltools::h4("Step 1: Embed Documents"),
+      div(
+        style = "position: relative;",
+        htmltools::h4("Step 1: Embed Documents"),
+        div(
+          id = ns("embed_info_icon"),
+          style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+          bslib::tooltip(
+            bsicons::bs_icon("question-circle-fill"),
+            htmltools::span("Uses the all-miniLM-L6-v2 embedding model to ", 
+                            tags$a(href = "https://huggingface.co/blog/getting-started-with-embeddings", "embed text"),
+                            "."
+                            )
+          )
+        )
+      ),
+      # bslib::tooltip(
+      #   htmltools::span(
+      #     htmltools::h4("Step 1: Embed Documents"),
+      #     bsicons::bs_icon("info-circle")
+      #     ),
+      #   htmltools::span("Uses the all-miniLM-L6-v2 embedding model to ", 
+      #   tags$a(href = "https://huggingface.co/blog/getting-started-with-embeddings", "embed text"), 
+      #   "."
+      #   )
+      # ),
       shiny::actionButton(ns("embed_button"), label = shiny::HTML("<strong>Embed</strong>"), class = "btn-succes", 
                           width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
       shiny::uiOutput(ns("embed_status")),
       htmltools::h4("Step 2: Reduce Embedding Dimension"),
       shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
-      # "PCA")),
       shiny::conditionalPanel(
         condition = "input.reducing_method == 'UMAP'", ns = ns,
         shiny::div(
