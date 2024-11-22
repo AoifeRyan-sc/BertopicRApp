@@ -10,10 +10,24 @@ outlierUi <- function(id) {
 
   shiny::sidebarLayout(
     shiny::sidebarPanel(
-      shiny::selectInput(ns("outlier_method"), "Outlier Reduction Method", 
-                  choices = c("c-tf-idf",
-                              "embeddings",
-                              "tokenset similarity")),
+      shiny::div(
+        style = "position: relative;",
+        shiny::selectInput(ns("outlier_method"), "Outlier Reduction Method", 
+                           choices = c("c-tf-idf",
+                                       "embeddings",
+                                       "tokenset similarity")),
+        shiny::div(
+          style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+          bslib::tooltip(
+            bsicons::bs_icon("question-circle-fill"),
+            htmltools::span(
+              "Different methods use different metrics to move outliers into topics, the suitable threshold will change between topics and between outlier reduction methods. You can find some more info by testing methods out and ",
+              htmltools::tags$a(href = "https://maartengr.github.io/BERTopic/getting_started/outlier_reduction/outlier_reduction.html", "here"),
+              "."
+            )
+          )
+        )
+      ),
       shiny::sliderInput(ns("outlier_threshold"),
                   "Threshold:",
                   min = 0,

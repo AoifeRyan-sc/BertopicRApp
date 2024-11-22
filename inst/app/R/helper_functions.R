@@ -268,12 +268,12 @@ progress_annimation <- function(processing_value_check, complete_value_check, pr
     return(
       htmltools::tagList(
         htmltools::tags$head(
-          tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+          htmltools::tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
         ),
         htmltools::div(
           class = "reduced-embeddings",
-          span(class = "check-emoji", "✅"),
-          span(class = "reducing-text", complete_text)
+          htmltools::span(class = "check-emoji", "✅"),
+          htmltools::span(class = "reducing-text", complete_text)
         ))
     )
   }

@@ -47,15 +47,15 @@ uploadUi <- function(id) {
         ns("data_upload"), "Upload your data",
         accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
       shiny::uiOutput(ns("data_upload_error_message")),
-      div(
+      shiny::div(
         style = "position: relative;",
         shiny::textInput(ns("text_col"), "Text Column:", placeholder = "message"),
-        div(
+        shiny::div(
           id = ns("text_col_icon"),
           style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
           bslib::tooltip(
             bsicons::bs_icon("question-circle-fill"),
-            "This is to pass the text column on which you wish to topic model. It will be displaed as 'docs' in all table outputs throughout the app."
+            "This is to pass the text column on which you wish to topic model. It will be displayed as 'docs' in all table outputs throughout the app."
           )
         )
       ),
