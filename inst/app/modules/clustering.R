@@ -20,26 +20,56 @@ shiny::tagList(
       ),
       shiny::conditionalPanel(
         condition = "input.cluster_method == 'HDBSCAN'", ns = ns,
-        shiny::sliderInput(ns("min_cluster_size"), "Minimum cluster size:",
-                           min = 2, max = 20, value = 20, round = TRUE
-                           # step = ceiling((20 - 2)/5)
-        ), # arbitrarily setting the defaults
-        # shiny::numericInput(ns("numeric_input_min_cluster_size"), label = "",
-        #                     min = 2, max = 20, value = 20),
-        # shiny::br(),
-        shiny::sliderInput(ns("min_sample_size"), "Minimum number of samples:",
-                           min = 1, max = 20, value = 20), # these values update as defined in the server
-        # shiny::numericInput(ns("numeric_input_min_sample_size"), label = "",
-        #                     min = 1, max = 20, value = 20),
-        # shiny::br(),
+        shiny::div(
+          style = "position: relative;",
+          shiny::sliderInput(ns("min_cluster_size"), "Minimum cluster size:",
+                             min = 2, max = 20, value = 20, round = TRUE
+          ), 
+          shiny::div(
+            style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+            bslib::tooltip(
+              bsicons::bs_icon("question-circle-fill"),
+              "Dictates the minimum allowable posts per cluster."
+            )
+          )
+        ),
+        shiny::div(
+          style = "position: relative;",
+          shiny::sliderInput(ns("min_sample_size"), "Minimum number of samples:",
+                             min = 1, max = 20, value = 20), # these values update as defined in the server
+          shiny::div(
+            style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+            bslib::tooltip(
+              bsicons::bs_icon("question-circle-fill"),
+              htmltools::span(
+                "Higher min_samples = more conservative clustering and more outliers, and vice versa for lower min_samples. 
+                  You can find more information about hdbscan clustering and min samples ",
+                tags$a(href = "https://hdbscan.readthedocs.io/en/latest/parameter_selection.html#selecting-min-samples", "here"),
+                "."
+              )
+            )
+          )
+        ),
         shiny::selectInput(ns("hdbscan_metric"), "Clustering Metric", choices = c(
-          # "cosine", - Not supported by sklearn
           "euclidean", "braycurtis", "canberra", "chebyshev", "cityblock", "correlation",  "dice", "hamming", "jaccard", "jensenshannon", "kulczynski1", "mahalanobis", "matching", "minkowski", "rogerstanimoto", "russellrao", "seuclidean", "sokalmichener", "sokalsneath", "sqeuclidean", "yule")),
-        shiny::radioButtons(ns("hdbscan_cluster_selection"), "Cluster Selection Method", choices = c("eom", "leaf"))
+        shiny::div(
+          style = "position: relative;",
+          shiny::radioButtons(ns("hdbscan_cluster_selection"), "Cluster Selection Method", choices = c("eom", "leaf")),
+          shiny::div(
+            style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+            bslib::tooltip(
+              bsicons::bs_icon("question-circle-fill"),
+              htmltools::span(
+                "Leaf tends to give smaller, more evenly sized clusters, where excess of mass tends to pick a few larger clusters. you can find some more info ",
+                tags$a(href = "https://hdbscan.readthedocs.io/en/latest/parameter_selection.html", "here"),
+                "."
+              )
+            )
+          )
+        ),
       ),
       shiny::actionButton(ns("do_modelling"), "Model", class = "btn-succes"),
       shiny::actionButton(ns("reset_model"), "Reset", classs = "btn-danger"),
-      # shiny::verbatimTextOutput(ns("complete_message"))
       shinycssloaders::withSpinner(shiny::uiOutput(ns("complete_message")))
 
     ),

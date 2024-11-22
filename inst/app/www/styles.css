@@ -45,3 +45,15 @@
 .check-emoji {
   font-size: 24px;
 }
+
+/*  this was supposed to aligned the reducing metric numeric inputs to the
+/* bottom of the box but it didn't work so leaving for now and will return to it again
+/* .numeric-label {
+/*   display: flex;
+/*   flex-direction: column-reverse;
+/*   align-items: flex-start;
+/* }
+
+/* .numeric-label label {
+/*   margin-top: 5px; /* Optional: spacing between label and input */
+/* }

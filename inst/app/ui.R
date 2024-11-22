@@ -1,6 +1,6 @@
-ui <- fluidPage(
-  theme = shinythemes::shinytheme("readable"),
-  
+ui <- shiny::fluidPage(
+  theme = bslib::bs_theme(bootswatch = "zephyr"), # need to use a bslib theme for bslib tooltip to work
+  # theme = bslib::bs_theme(bootswatch = "cerulean"), # need to use a bslib theme for bslib tooltip to work
   shiny::tagList(
     shinyjs::useShinyjs(),
     navbarPage(

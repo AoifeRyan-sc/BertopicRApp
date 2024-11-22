@@ -7,6 +7,7 @@ library(shiny)
 library(BertopicR)
 library(here)
 library(magrittr)
+library(shiny)
 
 # Temporary to allow for live reloads in an RStudio background job or app running in a terminal:
 options(shiny.autoreload=TRUE)
@@ -32,5 +33,5 @@ source(here("inst/app/server.R"))
 if(interactive()){
   shinyApp(ui, server)
 } else {
-  shiny::runApp(here::here("app"))
+  shiny::runApp(here::here("inst/app"))
   }

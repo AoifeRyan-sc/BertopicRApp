@@ -4,13 +4,39 @@ embedReduceUi <- function(id){
   
   shiny::sidebarLayout(
     shiny::sidebarPanel(
-      htmltools::h4("Step 1: Embed Documents"),
+      shiny::div(
+        style = "position: relative;",
+        htmltools::h4("Step 1: Embed Documents"),
+        shiny::div(
+          style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+          bslib::tooltip(
+            bsicons::bs_icon("question-circle-fill"),
+            htmltools::span("Uses the all-miniLM-L6-v2 embedding model to ", 
+                            tags$a(href = "https://huggingface.co/blog/getting-started-with-embeddings", "embed text"),
+                            "."
+                            )
+          )
+        )
+      ),
       shiny::actionButton(ns("embed_button"), label = shiny::HTML("<strong>Embed</strong>"), class = "btn-succes", 
                           width = "100%", style = "margin-bottom: 30px; border-width: 2px;"),
       shiny::uiOutput(ns("embed_status")),
-      htmltools::h4("Step 2: Reduce Embedding Dimension"),
-      shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP", "PCA")),
-      # "PCA")),
+      shiny::div(
+        style = "position: relative;",
+        htmltools::h4("Step 2: Reduce Embedding Dimension"),
+        shiny::div(
+          style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+          bslib::tooltip(
+            bsicons::bs_icon("question-circle-fill"),
+            htmltools::span("Embeddings have too many dimensions for a clustering algorithm to converge on, we use ", 
+                            htmltools::tags$a(href = "https://umap-learn.readthedocs.io/en/latest/clustering.html", "UMAP"),
+                            " to reduce embeddings to a size that allows clustering. We will also reduce behind the scenes to 2D for visualisaitons purposes."
+            )
+          )
+        )
+      ),
+      shiny::selectInput(ns("reducing_method"), "Reducing Method", choices = c("UMAP")),
+      # choices = c("UMAP", "PCA")),
       shiny::conditionalPanel(
         condition = "input.reducing_method == 'UMAP'", ns = ns,
         shiny::div(
@@ -21,23 +47,12 @@ embedReduceUi <- function(id){
           ),
           shiny::div(
             class= "col-md-6",
-            shiny::numericInput(ns("n_components"), "No. of Dimensions", value = 5)
+            shiny::numericInput(ns("n_components"), "No. of Dimensions", value = 15),
+            style = "margin-top: 25px"
           ),
           style = "margin-top: 30px"
         ),
-        shiny::div(
-          class = "row",
-          shiny::div(
-            class = "col-md-7",
-            shiny::numericInput(ns("min_dist"), "Min Distance Between Points", value = 0)
-          ),
-          shiny::div(
-            class= "col-md-5",
-            shiny::selectInput(ns("reducing_metric"), "Distance Metric", choices = c("cosine", "euclidean")) # expand this
-          )
-        ),
         shiny::uiOutput(ns("print_status")),
-        # shiny::verbatimTextOutput(ns("print_status")),
         shiny::actionButton(ns("do_reducing"), label = shiny::HTML("<strong>Reduce</strong>"), class = "btn-succes", 
                             width = "100%", style = "margin-bottom: 30px; border-width: 2px;")
       ),
@@ -45,8 +60,6 @@ embedReduceUi <- function(id){
         condition = "input.reducing_method == 'PCA'", ns = ns,
         "This functionality is not yet implemented in the app."
       )
-      # embedUi(ns("embed_components")),
-      # reduceUi(ns("reduce_components"))
     ),
     shiny::mainPanel(
       shiny::fluidRow(
@@ -56,9 +69,6 @@ embedReduceUi <- function(id){
         ),
         bslib::card(
           shiny::uiOutput(ns("reduce_status"))
-        ),
-        bslib::card(
-          shiny::uiOutput(ns("reduce_progress"))
         ),
         bslib::card(
           shiny::uiOutput(ns("reduce2d_status"))
@@ -136,7 +146,7 @@ embedReduceServer <- function(id, r){
                                                    metric = metric)
         reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
       },
-      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
+      args = list(n_neighbours = input$n_neighbours, n_components = input$n_components, min_dist = 0, metric = "cosine", embeddings = r$df$embeddings),
       supervise = TRUE)
     }) 
     
@@ -173,7 +183,7 @@ embedReduceServer <- function(id, r){
                                                    metric = metric)
         reduced_embeddings <- BertopicR::bt_do_reducing(reducer, embeddings)
       },
-      args = list(n_neighbours = input$n_neighbours, n_components = 2, min_dist = input$min_dist, metric = input$reducing_metric, embeddings = r$df$embeddings),
+      args = list(n_neighbours = input$n_neighbours, n_components = 2, min_dist = 0, metric = "cosine", embeddings = r$df$embeddings),
       supervise = TRUE)
     }) 
     
@@ -199,53 +209,6 @@ embedReduceServer <- function(id, r){
       
     })
     
-    # reduced_embeddings2d <- backgroundReduce(
-    #   id = "reduced_embeddings2d",
-    #   n_neighbours = input$n_neighbours,
-    #   n_components = 2,
-    #   min_dist = input$min_dist,
-    #   metric = input$reducing_metric,
-    #   embeddings = r$df$embeddings,
-    #   wait_for_event = TRUE
-    # ) # I think I want to change this to be a normal function
-    # 
-    # shiny::observeEvent(input$do_reducing, {
-    #   # reduced_embeddings$start_job()
-    #   reduced_embeddings2d$start_job()
-    # })
-    # 
-    # shiny::observe({
-    #   # r$reduced_embeddings2d <- df[c("v1", "v2")]
-    # #   req(!is.null(reduced_embeddings2d))
-    #   r$reduced_embeddings2d<- reduced_embeddings2d$get_result()
-    # })
-    # 
-    # output$reduce2d_status <- shiny::renderUI({
-    # 
-    #   if (is.array(r$reduced_embeddings2d) | is.data.frame(r$reduced_embeddings2d)){
-    #     htmltools::tagList(
-    #       htmltools::tags$head(
-    #         tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-    #       ),
-    #       htmltools::div(
-    #         class = "reduced-embeddings",
-    #         span(class = "check-emoji", "✅"),
-    #         span(class = "reducing-text", "Reduced to 2D!")
-    #       ))
-    #   } else if (stringr::str_detect(reduced_embeddings2d$progress_message(),"Reducing in progress")){
-    #     htmltools::tagList(
-    #       htmltools::tags$head(
-    #         tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-    #       ),
-    #       htmltools::div(
-    #         class = "reducing-embeddings",
-    #         span(class = "timer-emoji", "⏳"),
-    #         span(class = "reducing-text", "Reducing Embeddings to 2D")
-    #       ))
-    #   } 
-    # })
-    
-    # ----
   })
 }
 

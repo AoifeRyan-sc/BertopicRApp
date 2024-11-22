@@ -4,26 +4,68 @@
 #'
 #' @noRd
 #'
+# uploadUi <- function(id) {
+# 
+#   ns <- NS(id)
+# 
+#   shiny::sidebarLayout(
+#     shiny::sidebarPanel(
+#       shiny::fileInput(
+#         ns("data_upload"), "Upload your data",
+#         accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
+#       shiny::uiOutput(ns("data_upload_error_message")),
+#       div(
+#         style = "position: relative;",
+#         shiny::textInput(ns("text_col"), "Text Column:", placeholder = "message"),
+#         div(
+#           id = ns("text_col_icon"),
+#           style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+#           # bsicons::bs_icon("question-circle-fill")
+#           tags$i(
+#             id = ns("text_col_icon"),
+#             class = "glyphicon glyphicon-question-sign",
+#             style = "position: absolute; top: 10px; right: 5px; transform: translateX(-20%);"
+#           )
+#         )
+#       ),
+#       shinyBS::bsTooltip(id = ns("text_col_icon"), title = "This is to pass the text column on which you wish to topic model. It will be displays as 'docs' in all table outputs throughout the app.", placement = "top"),
+#       shiny::actionButton(ns("submit_col_name"), "Submit")
+#     ),
+#     shiny::mainPanel(
+#       DT::dataTableOutput((ns("uploaded_data"))),
+#     )
+#   )
+# 
+# }
+# #
 uploadUi <- function(id) {
-  
   ns <- NS(id)
-  
+
   shiny::sidebarLayout(
     shiny::sidebarPanel(
       shiny::fileInput(
         ns("data_upload"), "Upload your data",
         accept = c(".xlsx", ".csv", ".tsv", ".rds"), multiple = FALSE),
       shiny::uiOutput(ns("data_upload_error_message")),
-      shiny::textInput(ns("text_col"), "Text Column:", placeholder = "message"),
+      shiny::div(
+        style = "position: relative;",
+        shiny::textInput(ns("text_col"), "Text Column:", placeholder = "message"),
+        shiny::div(
+          id = ns("text_col_icon"),
+          style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+          bslib::tooltip(
+            bsicons::bs_icon("question-circle-fill"),
+            "This is to pass the text column on which you wish to topic model. It will be displayed as 'docs' in all table outputs throughout the app."
+          )
+        )
+      ),
       shiny::actionButton(ns("submit_col_name"), "Submit")
     ),
     shiny::mainPanel(
-      DT::dataTableOutput((ns("uploaded_data"))),
+      DT::dataTableOutput((ns("uploaded_data")))
     )
   )
-
 }
-
 uploadServer <- function(id, r){
   shiny::moduleServer(id, function(input, output, session){
     ns <- session$ns

@@ -97,7 +97,17 @@ modelExploreServer <- function(id, r){
       if(!is.null(r$model)){
         shiny::tagList(
           shiny::br(),
-          DT::dataTableOutput(ns("doc_breakdown"))
+          shiny::div(
+            style = "position: relative;",
+            DT::dataTableOutput(ns("doc_breakdown")),
+            shiny::div(
+              style = "position: absolute; top: 0; right: 5px; transform: translateX(-20%);",
+              bslib::tooltip(
+                bsicons::bs_icon("question-circle-fill"),
+                "Selecting rows in this datatable will select those topics in the tabs on the main panel."
+              )
+            )
+          )
         )
         
       } else {
